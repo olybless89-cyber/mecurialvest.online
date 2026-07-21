@@ -20,10 +20,12 @@ app.use(cors({
     const allowed =
       allowedOrigins.some(o => origin === o || origin.startsWith(o)) ||
       /https:\/\/[a-z0-9-]+-[a-z0-9]+\.vercel\.app$/.test(origin) || // Vercel preview URLs
+      /https?:\/\/[a-z0-9-]+\.replit\.dev(:\d+)?$/.test(origin) ||    // Replit dev domains
+      /https?:\/\/[a-z0-9-]+\.repl\.co(:\d+)?$/.test(origin) ||       // Replit deployed repls
       origin === "http://localhost:3000" ||
-      origin === "http://localhost:5173";
-    if (allowed) cb(null, true);
-    else cb(new Error("Not allowed by CORS"));
+      origin === "http://localhost:5173" ||
+      origin === "http://localhost:8080";
+    cb(null, allowed); // never throw — return false instead to avoid 500 on preflight
   },
   credentials: true,
 }));
