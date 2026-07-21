@@ -51,12 +51,13 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center p-4 bg-muted/30">
-      <div className="absolute top-8 left-8">
+    <div className="min-h-[100dvh] flex flex-col p-4 bg-muted/30">
+      <div className="py-4 px-2">
         <NexBankLogo />
       </div>
-      
-      <Card className="w-full max-w-lg shadow-lg border-muted my-12">
+
+      <div className="flex-1 flex items-center justify-center">
+      <Card className="w-full max-w-lg shadow-lg border-muted my-6">
         <CardHeader className="space-y-2 text-center pb-6">
           <CardTitle className="text-3xl font-bold tracking-tight">Open an Account</CardTitle>
           <CardDescription className="text-base">
@@ -135,6 +136,7 @@ export default function Register() {
           </p>
         </CardFooter>
       </Card>
+      </div>
     </div>
   );
 }

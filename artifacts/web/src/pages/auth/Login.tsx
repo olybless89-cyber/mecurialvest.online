@@ -48,11 +48,12 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center p-4 bg-muted/30">
-      <div className="absolute top-8 left-8">
+    <div className="min-h-[100dvh] flex flex-col p-4 bg-muted/30">
+      <div className="py-4 px-2">
         <NexBankLogo />
       </div>
-      
+
+      <div className="flex-1 flex items-center justify-center">
       <Card className="w-full max-w-md shadow-lg border-muted">
         <CardHeader className="space-y-2 text-center pb-8">
           <CardTitle className="text-3xl font-bold tracking-tight">Sign In</CardTitle>
@@ -104,6 +105,7 @@ export default function Login() {
           </p>
         </CardFooter>
       </Card>
+      </div>
     </div>
   );
 }
