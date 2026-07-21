@@ -13,10 +13,16 @@ const app: Express = express();
 app.use(helmet());
 
 // CORS
-const allowedOrigins = (process.env["FRONTEND_URL"] || "http://localhost:3000").split(",");
+const allowedOrigins = (process.env["FRONTEND_URL"] || "http://localhost:3000").split(",").map(o => o.trim());
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || allowedOrigins.some(o => origin.startsWith(o.trim()))) cb(null, true);
+    if (!origin) return cb(null, true); // same-origin / server-to-server
+    const allowed =
+      allowedOrigins.some(o => origin === o || origin.startsWith(o)) ||
+      /https:\/\/[a-z0-9-]+-[a-z0-9]+\.vercel\.app$/.test(origin) || // Vercel preview URLs
+      origin === "http://localhost:3000" ||
+      origin === "http://localhost:5173";
+    if (allowed) cb(null, true);
     else cb(new Error("Not allowed by CORS"));
   },
   credentials: true,
