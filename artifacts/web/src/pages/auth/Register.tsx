@@ -35,10 +35,11 @@ export default function Register() {
     setIsLoading(true);
     try {
       const response = await registerMutation.mutateAsync({ data });
-      if (response.accessToken) {
-        setToken(response.accessToken);
-        setRefreshToken(response.refreshToken);
-        setUser(response.user);
+      const token = response.data?.accessToken ?? (response as any).accessToken;
+      if (token) {
+        setToken(token);
+        setRefreshToken(response.data?.refreshToken ?? (response as any).refreshToken);
+        setUser(response.data?.user ?? (response as any).user);
         toast.success('Account created successfully! Please check your email to verify your account.');
         setLocation('/dashboard');
       }

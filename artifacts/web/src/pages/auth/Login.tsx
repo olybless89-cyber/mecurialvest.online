@@ -32,10 +32,11 @@ export default function Login() {
     setIsLoading(true);
     try {
       const response = await loginMutation.mutateAsync({ data });
-      if (response.accessToken) {
-        setToken(response.accessToken);
-        setRefreshToken(response.refreshToken);
-        setUser(response.user);
+      const token = response.data?.accessToken ?? (response as any).accessToken;
+      if (token) {
+        setToken(token);
+        setRefreshToken(response.data?.refreshToken ?? (response as any).refreshToken);
+        setUser(response.data?.user ?? (response as any).user);
         toast.success('Welcome back to NexBank');
         setLocation('/dashboard');
       }
