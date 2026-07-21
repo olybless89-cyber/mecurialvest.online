@@ -24,6 +24,8 @@ export const pool = new Pool({
   ssl: sslConfig,
   connectionTimeoutMillis: 10000,
   idleTimeoutMillis: 30000,
+  // Explicitly set search_path so tables resolve regardless of role defaults
+  options: "-c search_path=public",
 });
 export const db = drizzle(pool, { schema });
 
