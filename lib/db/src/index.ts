@@ -12,19 +12,20 @@ if (!connectionString) {
   );
 }
 
-// Supabase requires SSL. For direct connections (:5432) and pooler (:6543)
-// rejectUnauthorized:false avoids cert errors on hosted platforms (Render, etc.)
-const url = new URL(connectionString);
-const sslConfig = url.searchParams.get("sslmode") === "disable"
-  ? undefined
-  : { rejectUnauthorized: false };
+// Supabase requires SSL. rejectUnauthorized:false avoids cert errors on hosted platforms.
+let sslConfig: { rejectUnauthorized: boolean } | undefined = { rejectUnauthorized: false };
+try {
+  const url = new URL(connectionString);
+  if (url.searchParams.get("sslmode") === "disable") sslConfig = undefined;
+} catch {
+  // URL parse failed — keep default SSL config
+}
 
 export const pool = new Pool({
   connectionString,
   ssl: sslConfig,
   connectionTimeoutMillis: 10000,
   idleTimeoutMillis: 30000,
-  // Explicitly set search_path so tables resolve regardless of role defaults
   options: "-c search_path=public",
 });
 export const db = drizzle(pool, { schema });
