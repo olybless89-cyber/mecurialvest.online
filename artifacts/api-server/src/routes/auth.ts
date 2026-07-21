@@ -60,8 +60,9 @@ router.post("/register", async (req: Request, res: Response) => {
     const refreshToken = signRefreshToken({ userId: user.id, email: user.email, role: user.role });
 
     res.status(201).json(success({ user, accessToken, refreshToken }, "Account created successfully"));
-  } catch (err) {
-    res.status(500).json({ success: false, message: "Registration failed" });
+  } catch (err: any) {
+    console.error("[REGISTER ERROR]", err?.message, err?.code, err?.stack?.split("\n")[1]);
+    res.status(500).json({ success: false, message: "Registration failed", detail: err?.message });
   }
 });
 

@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { pool } from "@workspace/db";
 
 const rawPort = process.env["PORT"];
 
@@ -14,6 +15,13 @@ const port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
+
+// Verify DB connectivity on startup
+pool.query("SELECT 1").then(() => {
+  logger.info("Database connection OK");
+}).catch((err: any) => {
+  logger.error({ err: err.message }, "Database connection FAILED — check SUPABASE_DATABASE_URL");
+});
 
 app.listen(port, (err) => {
   if (err) {
