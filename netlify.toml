@@ -1,0 +1,21 @@
+[build]
+  base = "artifacts/web"
+  command = "pnpm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Redirect all routes to Next.js
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/___netlify-handler"
+  status = 200
+
+[context.production.environment]
+  NODE_ENV = "production"
+  # Set these in Netlify dashboard → Site configuration → Environment variables:
+  # NEXT_PUBLIC_API_URL = https://your-render-app.onrender.com
