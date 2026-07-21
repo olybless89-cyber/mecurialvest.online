@@ -54,10 +54,10 @@ export default function AdminUsers() {
   const [fundAmount, setFundAmount] = useState('');
   const [fundAccountId, setFundAccountId] = useState('');
 
-  const users: any[] = (usersData as any)?.data ?? [];
+  const users: any[] = (usersData as any)?.data?.items ?? [];
 
   const handleToggleSuspend = async (user: any) => {
-    const isSuspended = user.status === 'SUSPENDED';
+    const isSuspended = user.isSuspended === true;
     try {
       if (isSuspended) {
         await unsuspendMutation.mutateAsync({ id: user.id });

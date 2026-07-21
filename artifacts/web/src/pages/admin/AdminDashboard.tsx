@@ -30,7 +30,7 @@ export default function AdminDashboard() {
               <Skeleton className="h-8 w-20" />
             ) : (
               <div className="text-2xl font-bold">
-                {(stats?.totalUsers ?? 0).toLocaleString()}
+                {(stats?.users?.total ?? 0).toLocaleString()}
               </div>
             )}
             <p className="text-xs text-muted-foreground mt-1">Registered accounts</p>
@@ -47,7 +47,7 @@ export default function AdminDashboard() {
               <Skeleton className="h-8 w-20" />
             ) : (
               <div className="text-2xl font-bold">
-                {(stats?.totalAccounts ?? 0).toLocaleString()}
+                {(stats?.accounts?.total ?? 0).toLocaleString()}
               </div>
             )}
             <p className="text-xs text-muted-foreground mt-1">Checking &amp; Savings</p>
@@ -64,7 +64,7 @@ export default function AdminDashboard() {
               <Skeleton className="h-8 w-20" />
             ) : (
               <div className="text-2xl font-bold">
-                {(stats?.totalTransactions ?? 0).toLocaleString()}
+                {(stats?.transactions?.total ?? 0).toLocaleString()}
               </div>
             )}
             <p className="text-xs text-muted-foreground mt-1">Processed</p>

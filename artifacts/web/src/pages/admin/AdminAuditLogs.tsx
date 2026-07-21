@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 
 export default function AdminAuditLogs() {
   const { data: logsRes, isLoading } = useListAuditLogs({ limit: 100 } as any);
-  const logs: any[] = (logsRes as any)?.data ?? [];
+  const logs: any[] = (logsRes as any)?.data?.items ?? [];
 
   return (
     <div className="space-y-6">
