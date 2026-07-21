@@ -1,4 +1,4 @@
-# NexBank — Deployment Guide
+# OrcaBank — Deployment Guide
 ## Stack: Vercel (Frontend) · Render (Backend API) · Supabase (PostgreSQL)
 
 ---

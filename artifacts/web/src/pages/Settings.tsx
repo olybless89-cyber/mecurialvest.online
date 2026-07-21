@@ -31,7 +31,7 @@ export default function Settings() {
         <Card>
           <CardHeader>
             <CardTitle>Appearance</CardTitle>
-            <CardDescription>Customize how NexBank looks on your device.</CardDescription>
+            <CardDescription>Customize how OrcaBank looks on your device.</CardDescription>
           </CardHeader>
           <CardContent>
             <RadioGroup value={theme} onValueChange={setTheme} className="grid grid-cols-3 gap-4">

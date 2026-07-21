@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: nexbank-api
+    name: orcabank-api
     env: node
     region: oregon
     plan: free
@@ -25,4 +25,4 @@ services:
       - key: FROM_EMAIL
         sync: false   # e.g. NexBank <noreply@yourdomain.com>
       - key: FRONTEND_URL
-        sync: false   # Your Netlify URL e.g. https://nexbank.netlify.app
+        sync: false   # Your domain e.g. https://orcabank.online

@@ -60,7 +60,7 @@ export default function Register() {
         <CardHeader className="space-y-2 text-center pb-6">
           <CardTitle className="text-3xl font-bold tracking-tight">Open an Account</CardTitle>
           <CardDescription className="text-base">
-            Join NexBank and experience modern banking
+            Join OrcaBank and experience modern banking
           </CardDescription>
         </CardHeader>
         <CardContent>
