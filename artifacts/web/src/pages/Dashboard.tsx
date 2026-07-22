@@ -1,305 +1,266 @@
 import { Link } from 'wouter';
 import {
   useGetAccountStats,
-  useGetTransactionSummary,
-  useGetSpendingTrend,
   useListAccounts,
   useListTransactions,
 } from '@workspace/api-client-react';
 import { format } from 'date-fns';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard, ChevronRight } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
+  ArrowUpRight,
+  ArrowDownRight,
+  CreditCard,
+  ChevronRight,
+  Wallet,
+  Clock,
+} from 'lucide-react';
 
 export default function Dashboard() {
   const { data: stats, isLoading: isStatsLoading } = useGetAccountStats();
-  const { data: summary, isLoading: isSummaryLoading } = useGetTransactionSummary();
-  const { data: trend, isLoading: isTrendLoading } = useGetSpendingTrend();
   const { data: accounts, isLoading: isAccountsLoading } = useListAccounts();
   const { data: recentTxs, isLoading: isRecentTxsLoading } = useListTransactions({ limit: 5 });
+  const { data: heldTxs } = useListTransactions({ status: 'HELD', limit: 100 });
 
   const statsData = (stats as any)?.data;
-  const summaryData = (summary as any)?.data;
-  const trendData = (trend as any)?.data as Array<{ month: string; income: number; expense: number }> | undefined;
   const accountList = accounts?.data ?? [];
   const recentList = recentTxs?.data?.items ?? [];
+  const heldList = heldTxs?.data?.items ?? [];
+
+  const pendingCreditTotal = heldList.reduce((sum: number, tx: any) => {
+    return sum + parseFloat(tx.amount ?? '0');
+  }, 0);
 
   const formatCurrency = (amount: number | string | undefined, currency = 'USD') =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(
-      typeof amount === 'string' ? parseFloat(amount) : amount ?? 0,
+      typeof amount === 'string' ? parseFloat(amount) : (amount ?? 0),
     );
 
+  const txTypeLabel: Record<string, string> = {
+    ADMIN_CREDIT: 'Credit',
+    DEPOSIT: 'Deposit',
+    WITHDRAWAL: 'Withdrawal',
+    TRANSFER_IN: 'Transfer In',
+    TRANSFER_OUT: 'Transfer Out',
+    FEE: 'Fee',
+    REVERSAL: 'Reversal',
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-5 pb-6">
+      {/* ── Header ──────────────────────────────── */}
+      <div className="flex items-start justify-between gap-4 pt-1">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Overview</h2>
-          <p className="text-muted-foreground">Here's what's happening with your money today.</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Here's what's happening with your money today.
+          </p>
         </div>
         <Link href="/transfer">
-          <Button>
-            <ArrowUpRight className="mr-2 h-4 w-4" /> Send Money
+          <Button className="shrink-0 gap-2">
+            <ArrowUpRight className="h-4 w-4" />
+            Send Money
           </Button>
         </Link>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Balance</CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {isStatsLoading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
-              <div className="text-2xl font-bold">{formatCurrency(statsData?.totalBalance)}</div>
-            )}
-            <p className="text-xs text-muted-foreground mt-1">
-              Across {statsData?.accountCount ?? 0} accounts
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Monthly Income</CardTitle>
-            <ArrowDownRight className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            {isSummaryLoading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
-              <div className="text-2xl font-bold text-green-600">
-                {formatCurrency(summaryData?.monthlyIncome)}
-              </div>
-            )}
-            <p className="text-xs text-muted-foreground mt-1">This month</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Monthly Expenses</CardTitle>
-            <ArrowUpRight className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            {isSummaryLoading ? (
-              <Skeleton className="h-8 w-24" />
-            ) : (
-              <div className="text-2xl font-bold text-red-600">
-                {formatCurrency(summaryData?.monthlyExpenses)}
-              </div>
-            )}
-            <p className="text-xs text-muted-foreground mt-1">This month</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* ── Total Balance ─────────────────────── */}
+      <Card className="shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Total Balance</CardTitle>
+          <Wallet className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          {isStatsLoading ? (
+            <Skeleton className="h-9 w-36" />
+          ) : (
+            <div className="text-3xl font-bold">{formatCurrency(statsData?.totalBalance)}</div>
+          )}
+          <p className="text-xs text-muted-foreground mt-1">
+            Across {statsData?.accountCount ?? 0}{' '}
+            {statsData?.accountCount === 1 ? 'account' : 'accounts'}
+          </p>
+        </CardContent>
+      </Card>
 
-      <div className="grid gap-4 md:grid-cols-7">
-        <Card className="col-span-full md:col-span-4">
-          <CardHeader>
-            <CardTitle>Cash Flow</CardTitle>
-            <CardDescription>Income vs Expenses over the last 6 months</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            {isTrendLoading ? (
-              <div className="w-full h-full flex items-center justify-center">
-                <Skeleton className="h-full w-full" />
-              </div>
-            ) : trendData && trendData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#16a34a" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#16a34a" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#dc2626" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#dc2626" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} dy={10} />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(val) => `$${val}`}
-                  />
-                  <CartesianGrid
-                    vertical={false}
-                    strokeDasharray="3 3"
-                    stroke="hsl(var(--border))"
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      borderColor: 'hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                    formatter={(value: number) => formatCurrency(value)}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="income"
-                    stroke="#16a34a"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorIncome)"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="expense"
-                    stroke="#dc2626"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorExpense)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                No trend data available yet
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* ── Pending Credit ────────────────────── */}
+      <Card className="shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Pending Credit</CardTitle>
+          <Clock className="h-4 w-4 text-amber-500" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-3xl font-bold text-amber-600">
+            {formatCurrency(pendingCreditTotal)}
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            {heldList.length === 0
+              ? 'No funds on hold'
+              : `${heldList.length} transaction${heldList.length === 1 ? '' : 's'} awaiting release`}
+          </p>
+        </CardContent>
+      </Card>
 
-        <div className="col-span-full md:col-span-3 space-y-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle>My Accounts</CardTitle>
-              <Link
-                href="/accounts"
-                className="text-sm font-medium text-primary hover:underline flex items-center"
-              >
-                View All <ChevronRight className="h-4 w-4" />
-              </Link>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isAccountsLoading ? (
-                Array.from({ length: 2 }).map((_, i) => (
-                  <div key={i} className="flex items-center space-x-4">
-                    <Skeleton className="h-10 w-10 rounded-full" />
-                    <div className="space-y-2 flex-1">
-                      <Skeleton className="h-4 w-[120px]" />
-                      <Skeleton className="h-3 w-[80px]" />
-                    </div>
+      {/* ── My Accounts ───────────────────────── */}
+      <Card className="shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-base font-semibold">My Accounts</CardTitle>
+          <Link
+            href="/accounts"
+            className="text-sm font-medium text-primary hover:underline flex items-center gap-0.5"
+          >
+            View All <ChevronRight className="h-4 w-4" />
+          </Link>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {isAccountsLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-3 w-20" />
                   </div>
-                ))
-              ) : accountList.length > 0 ? (
-                accountList.slice(0, 3).map((account) => (
-                  <Link key={account.id} href={`/accounts/${account.id}`}>
-                    <div className="flex items-center justify-between p-3 -mx-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-                          <CreditCard className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="font-medium leading-none group-hover:text-primary transition-colors">
-                            {account.nickname || account.accountType}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            *{account.accountNumber.slice(-4)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="font-medium">
-                        {formatCurrency(account.balance, account.currency)}
-                      </div>
-                    </div>
-                  </Link>
-                ))
-              ) : (
-                <div className="text-sm text-muted-foreground text-center py-4">
-                  No accounts found
+                  <Skeleton className="h-4 w-20" />
                 </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle>Recent Transactions</CardTitle>
-              <Link
-                href="/transactions"
-                className="text-sm font-medium text-primary hover:underline flex items-center"
-              >
-                View All <ChevronRight className="h-4 w-4" />
-              </Link>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {isRecentTxsLoading ? (
-                  Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="flex items-center space-x-4">
-                      <Skeleton className="h-10 w-10 rounded-full" />
-                      <div className="space-y-2 flex-1">
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-3 w-[100px]" />
+              ))}
+            </div>
+          ) : accountList.length > 0 ? (
+            <div className="space-y-1">
+              {accountList.slice(0, 4).map((account) => (
+                <Link key={account.id} href={`/accounts/${account.id}`}>
+                  <div className="flex items-center justify-between py-2.5 px-2 -mx-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <CreditCard className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium leading-none group-hover:text-primary transition-colors">
+                          {account.nickname ||
+                            account.accountType.charAt(0) +
+                              account.accountType.slice(1).toLowerCase().replace('_', ' ')}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          ••••{account.accountNumber.slice(-4)}
+                        </p>
                       </div>
                     </div>
-                  ))
-                ) : recentList.length > 0 ? (
-                  recentList.map((tx) => {
-                    const isPositive = ['DEPOSIT', 'TRANSFER_IN', 'ADMIN_CREDIT'].includes(tx.type);
-                    const txTypeLabel: Record<string, string> = {
-                      ADMIN_CREDIT: 'Credit', DEPOSIT: 'Deposit', WITHDRAWAL: 'Withdrawal',
-                      TRANSFER_IN: 'Transfer In', TRANSFER_OUT: 'Transfer Out', FEE: 'Fee', REVERSAL: 'Reversal',
-                    };
-                    return (
-                      <div key={tx.id} className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`h-8 w-8 rounded-full flex items-center justify-center ${
-                              isPositive
-                                ? 'bg-green-100 text-green-600 dark:bg-green-900/30'
-                                : 'bg-red-100 text-red-600 dark:bg-red-900/30'
-                            }`}
-                          >
-                            {isPositive ? (
-                              <ArrowDownRight className="h-4 w-4" />
-                            ) : (
-                              <ArrowUpRight className="h-4 w-4" />
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-medium line-clamp-1">
-                              {tx.description || (txTypeLabel[tx.type] ?? tx.type.replace(/_/g, ' '))}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {tx.createdAt ? format(new Date(tx.createdAt), 'MMM d, h:mm a') : '—'}
-                            </p>
-                          </div>
-                        </div>
-                        <div
-                          className={`font-medium ${isPositive ? 'text-green-600' : ''}`}
-                        >
-                          {isPositive ? '+' : '-'}
-                          {formatCurrency(tx.amount)}
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="text-sm text-muted-foreground text-center py-4">
-                    No recent transactions
+                    <div className="text-right">
+                      <p className="text-sm font-semibold">
+                        {formatCurrency(account.balance, account.currency)}
+                      </p>
+                      <Badge
+                        variant={account.status === 'ACTIVE' ? 'secondary' : 'destructive'}
+                        className="text-[10px] py-0 h-4 mt-0.5"
+                      >
+                        {account.status}
+                      </Badge>
+                    </div>
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-6">No accounts found</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Recent Transactions ───────────────── */}
+      <Card className="shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-base font-semibold">Recent Transactions</CardTitle>
+          <Link
+            href="/transactions"
+            className="text-sm font-medium text-primary hover:underline flex items-center gap-0.5"
+          >
+            View All <ChevronRight className="h-4 w-4" />
+          </Link>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {isRecentTxsLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              ))}
+            </div>
+          ) : recentList.length > 0 ? (
+            <div className="space-y-1">
+              {recentList.map((tx: any) => {
+                const isPositive = ['DEPOSIT', 'TRANSFER_IN', 'ADMIN_CREDIT'].includes(tx.type);
+                const isHeld = tx.status === 'HELD';
+                return (
+                  <div
+                    key={tx.id}
+                    className="flex items-center justify-between py-2.5 px-2 -mx-2 rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${
+                          isHeld
+                            ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30'
+                            : isPositive
+                              ? 'bg-green-100 text-green-600 dark:bg-green-900/30'
+                              : 'bg-red-100 text-red-600 dark:bg-red-900/30'
+                        }`}
+                      >
+                        {isHeld ? (
+                          <Clock className="h-4 w-4" />
+                        ) : isPositive ? (
+                          <ArrowDownRight className="h-4 w-4" />
+                        ) : (
+                          <ArrowUpRight className="h-4 w-4" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium leading-none truncate">
+                          {tx.description || (txTypeLabel[tx.type] ?? tx.type.replace(/_/g, ' '))}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {tx.createdAt ? format(new Date(tx.createdAt), 'MMM d, h:mm a') : '—'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0 ml-3">
+                      <p
+                        className={`text-sm font-semibold ${
+                          isHeld
+                            ? 'text-amber-600'
+                            : isPositive
+                              ? 'text-green-600'
+                              : ''
+                        }`}
+                      >
+                        {isPositive ? '+' : '-'}
+                        {formatCurrency(tx.amount)}
+                      </p>
+                      {isHeld && (
+                        <Badge variant="outline" className="text-[10px] py-0 h-4 mt-0.5 text-amber-600 border-amber-300">
+                          On Hold
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              No recent transactions
+            </p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
