@@ -1056,7 +1056,7 @@ components:
           type: string
         type:
           type: string
-          enum: [DEPOSIT, WITHDRAWAL, TRANSFER_IN, TRANSFER_OUT, FEE, INTEREST, REVERSAL]
+          enum: [DEPOSIT, WITHDRAWAL, TRANSFER_IN, TRANSFER_OUT, FEE, INTEREST, REVERSAL, ADMIN_CREDIT]
         amount:
           type: string
         balanceBefore:
@@ -1071,13 +1071,25 @@ components:
           type: ["string", "null"]
         status:
           type: string
-          enum: [PENDING, COMPLETED, FAILED, REVERSED]
+          enum: [PENDING, COMPLETED, FAILED, REVERSED, HELD]
         counterpartName:
           type: ["string", "null"]
         counterpartBank:
           type: ["string", "null"]
         counterpartAccountNumber:
           type: ["string", "null"]
+        holdReason:
+          type: ["string", "null"]
+        cotAmount:
+          type: ["string", "null"]
+        taxAmount:
+          type: ["string", "null"]
+        chargesNote:
+          type: ["string", "null"]
+        cotPaid:
+          type: boolean
+        taxPaid:
+          type: boolean
         createdAt:
           type: string
       required: [id, refNumber, type, amount, status]

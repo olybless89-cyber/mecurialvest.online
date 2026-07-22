@@ -172,6 +172,7 @@ export const TransactionType = {
   FEE: 'FEE',
   INTEREST: 'INTEREST',
   REVERSAL: 'REVERSAL',
+  ADMIN_CREDIT: 'ADMIN_CREDIT',
 } as const;
 
 export type TransactionStatus = typeof TransactionStatus[keyof typeof TransactionStatus];
@@ -182,6 +183,7 @@ export const TransactionStatus = {
   COMPLETED: 'COMPLETED',
   FAILED: 'FAILED',
   REVERSED: 'REVERSED',
+  HELD: 'HELD',
 } as const;
 
 export interface Transaction {
@@ -205,6 +207,16 @@ export interface Transaction {
   counterpartBank?: string | null;
   /** @nullable */
   counterpartAccountNumber?: string | null;
+  /** @nullable */
+  holdReason?: string | null;
+  /** @nullable */
+  cotAmount?: string | null;
+  /** @nullable */
+  taxAmount?: string | null;
+  /** @nullable */
+  chargesNote?: string | null;
+  cotPaid?: boolean;
+  taxPaid?: boolean;
   createdAt?: string;
 }
 

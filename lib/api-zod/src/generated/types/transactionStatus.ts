@@ -14,4 +14,5 @@ export const TransactionStatus = {
   COMPLETED: 'COMPLETED',
   FAILED: 'FAILED',
   REVERSED: 'REVERSED',
+  HELD: 'HELD',
 } as const;

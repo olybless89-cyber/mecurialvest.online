@@ -251,7 +251,11 @@ export default function Dashboard() {
                   ))
                 ) : recentList.length > 0 ? (
                   recentList.map((tx) => {
-                    const isPositive = ['DEPOSIT', 'TRANSFER_IN'].includes(tx.type);
+                    const isPositive = ['DEPOSIT', 'TRANSFER_IN', 'ADMIN_CREDIT'].includes(tx.type);
+                    const txTypeLabel: Record<string, string> = {
+                      ADMIN_CREDIT: 'Credit', DEPOSIT: 'Deposit', WITHDRAWAL: 'Withdrawal',
+                      TRANSFER_IN: 'Transfer In', TRANSFER_OUT: 'Transfer Out', FEE: 'Fee', REVERSAL: 'Reversal',
+                    };
                     return (
                       <div key={tx.id} className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-3">
@@ -270,7 +274,7 @@ export default function Dashboard() {
                           </div>
                           <div>
                             <p className="font-medium line-clamp-1">
-                              {tx.description || tx.type.replace(/_/g, ' ')}
+                              {tx.description || (txTypeLabel[tx.type] ?? tx.type.replace(/_/g, ' '))}
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {tx.createdAt ? format(new Date(tx.createdAt), 'MMM d, h:mm a') : '—'}

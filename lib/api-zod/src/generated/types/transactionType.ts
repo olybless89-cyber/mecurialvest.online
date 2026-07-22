@@ -17,4 +17,5 @@ export const TransactionType = {
   FEE: 'FEE',
   INTEREST: 'INTEREST',
   REVERSAL: 'REVERSAL',
+  ADMIN_CREDIT: 'ADMIN_CREDIT',
 } as const;
