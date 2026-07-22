@@ -7,6 +7,7 @@ import {
   getHeldTransactionsQueryKey,
   getListAdminTransactionsQueryKey,
 } from '@workspace/api-client-react';
+import { AccountPicker, type PickedAccount } from '@/components/admin/AccountPicker';
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -32,7 +33,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
-import { MoreVertical, Unlock, DollarSign, Send, AlertCircle, Receipt } from 'lucide-react';
+import { MoreVertical, Unlock, Send, AlertCircle, Receipt } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AdminHeldPayments() {
@@ -47,8 +48,9 @@ export default function AdminHeldPayments() {
 
   // Send Payment dialog
   const [isSendOpen, setIsSendOpen] = useState(false);
+  const [selectedSendAccount, setSelectedSendAccount] = useState<PickedAccount | null>(null);
   const [sendForm, setSendForm] = useState({
-    accountId: '', amount: '', description: '',
+    amount: '', description: '',
     hold: true, holdReason: '',
     cotAmount: '', taxAmount: '', chargesNote: '',
   });
@@ -107,12 +109,12 @@ export default function AdminHeldPayments() {
   };
 
   const handleSendPayment = async () => {
-    if (!sendForm.accountId || !sendForm.amount) {
-      toast.error('Account ID and amount are required'); return;
+    if (!selectedSendAccount || !sendForm.amount) {
+      toast.error('Select an account and enter an amount'); return;
     }
     try {
       await sendPaymentMutation.mutateAsync({
-        accountId: Number(sendForm.accountId),
+        accountId: selectedSendAccount.id,
         amount: sendForm.amount,
         description: sendForm.description || undefined,
         hold: sendForm.hold,
@@ -123,7 +125,8 @@ export default function AdminHeldPayments() {
       });
       toast.success(sendForm.hold ? 'Payment sent and held' : 'Payment sent');
       setIsSendOpen(false);
-      setSendForm({ accountId: '', amount: '', description: '', hold: true, holdReason: '', cotAmount: '', taxAmount: '', chargesNote: '' });
+      setSelectedSendAccount(null);
+      setSendForm({ amount: '', description: '', hold: true, holdReason: '', cotAmount: '', taxAmount: '', chargesNote: '' });
       queryClient.invalidateQueries({ queryKey: getHeldTransactionsQueryKey() });
       queryClient.invalidateQueries({ queryKey: getListAdminTransactionsQueryKey() });
     } catch (e: any) {
@@ -247,18 +250,13 @@ export default function AdminHeldPayments() {
               Credit a user's account directly. Optionally hold the funds until manually released.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Account ID</Label>
-                <Input type="number" placeholder="e.g. 5" value={sendForm.accountId}
-                  onChange={e => setSendForm(p => ({ ...p, accountId: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Amount (USD)</Label>
-                <Input type="number" step="0.01" placeholder="0.00" value={sendForm.amount}
-                  onChange={e => setSendForm(p => ({ ...p, amount: e.target.value }))} />
-              </div>
+          <div className="space-y-4 py-2 max-h-[70vh] overflow-y-auto pr-1">
+            <AccountPicker value={selectedSendAccount} onChange={setSelectedSendAccount} label="Recipient Account" />
+
+            <div className="space-y-1.5">
+              <Label>Amount (USD)</Label>
+              <Input type="number" step="0.01" placeholder="0.00" value={sendForm.amount}
+                onChange={e => setSendForm(p => ({ ...p, amount: e.target.value }))} />
             </div>
             <div className="space-y-1.5">
               <Label>Description (optional)</Label>

@@ -10,6 +10,7 @@ import {
   getListAdminUsersQueryKey,
   getHeldTransactionsQueryKey,
 } from '@workspace/api-client-react';
+import { AccountPicker, type PickedAccount } from '@/components/admin/AccountPicker';
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -82,10 +83,15 @@ function UserAccountsDialog({ userId, userName, open, onClose }: {
             {accounts.map((acct: any) => (
               <div key={acct.id} className="flex items-center justify-between border rounded-lg p-3">
                 <div>
-                  <p className="text-sm font-medium">
-                    {acct.accountType} — •••{acct.accountNumber.slice(-4)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{fmt(acct.balance)}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
+                      ID: {acct.id}
+                    </span>
+                    <p className="text-sm font-medium">
+                      {acct.accountType} — •••{acct.accountNumber.slice(-4)}
+                    </p>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">{fmt(acct.balance)} · {acct.accountNumber}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge
@@ -138,7 +144,7 @@ export default function AdminUsers() {
 
   const [isFundOpen, setIsFundOpen] = useState(false);
   const [fundAmount, setFundAmount] = useState('');
-  const [fundAccountId, setFundAccountId] = useState('');
+  const [selectedFundAccount, setSelectedFundAccount] = useState<PickedAccount | null>(null);
 
   const [accountsUser, setAccountsUser] = useState<{ id: number; name: string } | null>(null);
 
@@ -161,20 +167,22 @@ export default function AdminUsers() {
   };
 
   const handleFund = async () => {
-    if (!fundAccountId || !fundAmount) {
-      toast.error('Please fill all fields');
+    if (!selectedFundAccount || !fundAmount) {
+      toast.error('Select an account and enter an amount');
       return;
     }
     try {
       await fundMutation.mutateAsync({
         data: {
-          accountId: Number(fundAccountId),
+          accountId: selectedFundAccount.id,
           amount: fundAmount,
           description: 'Admin account funding',
         },
       });
       toast.success('Account funded successfully');
       setIsFundOpen(false);
+      setSelectedFundAccount(null);
+      setFundAmount('');
       queryClient.invalidateQueries({ queryKey: getHeldTransactionsQueryKey() });
     } catch (error: any) {
       toast.error(error?.message || 'Funding failed');
@@ -200,7 +208,7 @@ export default function AdminUsers() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Button variant="outline" size="sm" onClick={() => { setFundAccountId(''); setFundAmount(''); setIsFundOpen(true); }}>
+            <Button variant="outline" size="sm" onClick={() => { setSelectedFundAccount(null); setFundAmount(''); setIsFundOpen(true); }}>
               <DollarSign className="mr-2 h-4 w-4" /> Fund Account
             </Button>
           </div>
@@ -291,18 +299,14 @@ export default function AdminUsers() {
       </Card>
 
       {/* Fund Account Dialog */}
-      <Dialog open={isFundOpen} onOpenChange={setIsFundOpen}>
-        <DialogContent>
+      <Dialog open={isFundOpen} onOpenChange={(open) => { setIsFundOpen(open); if (!open) { setSelectedFundAccount(null); setFundAmount(''); } }}>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Fund Account</DialogTitle>
-            <DialogDescription>Add funds directly to an account by its numeric ID.</DialogDescription>
+            <DialogDescription>Search for a user, pick their account, then enter the amount.</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label>Target Account ID</Label>
-              <Input type="number" placeholder="e.g. 5" value={fundAccountId}
-                onChange={(e) => setFundAccountId(e.target.value)} />
-            </div>
+          <div className="space-y-4 py-2 max-h-[70vh] overflow-y-auto pr-1">
+            <AccountPicker value={selectedFundAccount} onChange={setSelectedFundAccount} label="Target Account" />
             <div className="space-y-2">
               <Label>Amount (USD)</Label>
               <Input type="number" step="0.01" placeholder="1000.00" value={fundAmount}
