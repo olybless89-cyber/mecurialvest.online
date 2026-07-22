@@ -93,6 +93,21 @@ router.post("/users/:id/unsuspend", async (req: AuthRequest, res: Response) => {
   }
 });
 
+// POST /api/admin/users/:id/reset-pin — clear a user's transaction PIN
+router.post("/users/:id/reset-pin", async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = parseInt(req.params["id"]!);
+    await db.update(usersTable).set({ pinHash: null, pinSet: false, updatedAt: new Date() }).where(eq(usersTable.id, userId));
+    await db.insert(auditLogsTable).values({
+      adminId: req.user!.id, action: "RESET_PIN", entity: "user",
+      entityId: String(userId), ipAddress: req.ip || null,
+    });
+    res.json(success(null, "Transaction PIN reset. User must set a new PIN from their profile."));
+  } catch {
+    res.status(500).json({ success: false, message: "Failed to reset PIN" });
+  }
+});
+
 // POST /api/admin/fund-account — credit an account
 router.post("/fund-account", async (req: AuthRequest, res: Response) => {
   try {

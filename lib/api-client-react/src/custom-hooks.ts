@@ -107,6 +107,18 @@ export const useUnsuspendAccount = <TError = unknown, TContext = unknown>(
 
 // ─── ADMIN: Get user accounts ─────────────────────────────────────────────────
 
+// POST /api/admin/users/:id/reset-pin
+export const useResetUserPin = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: number) =>
+      customFetch(`/api/admin/users/${userId}/reset-pin`, { method: 'POST' }),
+    onSuccess: (_: any, userId: number) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/users/${userId}`] });
+    },
+  });
+};
+
 export const getAdminUserAccountsQueryKey = (userId: number) => [`/api/admin/users/${userId}/accounts`] as const;
 
 export const useGetAdminUserAccounts = <TData = any, TError = unknown>(

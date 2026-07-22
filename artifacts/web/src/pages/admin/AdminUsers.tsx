@@ -7,6 +7,7 @@ import {
   useGetAdminUserAccounts,
   useSuspendAccount,
   useUnsuspendAccount,
+  useResetUserPin,
   getListAdminUsersQueryKey,
   getHeldTransactionsQueryKey,
 } from '@workspace/api-client-react';
@@ -34,7 +35,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, MoreVertical, Ban, CheckCircle, DollarSign, Wallet } from 'lucide-react';
+import { Search, MoreVertical, Ban, CheckCircle, DollarSign, Wallet, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Sub-component: shows accounts for a user with suspend/unsuspend actions
@@ -141,6 +142,17 @@ export default function AdminUsers() {
   const suspendMutation = useSuspendUser();
   const unsuspendMutation = useUnsuspendUser();
   const fundMutation = useFundAccount();
+  const resetPinMutation = useResetUserPin();
+
+  const handleResetPin = async (user: any) => {
+    if (!confirm(`Reset transaction PIN for ${user.firstName} ${user.lastName}? They will need to set a new PIN from their Profile.`)) return;
+    try {
+      await resetPinMutation.mutateAsync(user.id);
+      toast.success(`PIN reset for ${user.email}. User must set a new PIN from their Profile.`);
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to reset PIN');
+    }
+  };
 
   const [isFundOpen, setIsFundOpen] = useState(false);
   const [fundAmount, setFundAmount] = useState('');
@@ -271,6 +283,9 @@ export default function AdminUsers() {
                             onClick={() => setAccountsUser({ id: user.id, name: `${user.firstName} ${user.lastName}` })}
                           >
                             <Wallet className="mr-2 h-4 w-4" /> Manage Accounts
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleResetPin(user)}>
+                            <KeyRound className="mr-2 h-4 w-4" /> Reset Transaction PIN
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem

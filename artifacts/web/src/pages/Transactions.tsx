@@ -34,6 +34,20 @@ export default function Transactions() {
       typeof amount === 'string' ? parseFloat(amount) : amount ?? 0,
     );
 
+  // User-friendly label for transaction types
+  const typeLabel = (type: string) => {
+    const map: Record<string, string> = {
+      ADMIN_CREDIT: 'Credit',
+      DEPOSIT: 'Deposit',
+      WITHDRAWAL: 'Withdrawal',
+      TRANSFER_IN: 'Transfer In',
+      TRANSFER_OUT: 'Transfer Out',
+      FEE: 'Fee',
+      REVERSAL: 'Reversal',
+    };
+    return map[type] ?? type.replace(/_/g, ' ');
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -77,6 +91,7 @@ export default function Transactions() {
                   <SelectItem value="PENDING">Pending</SelectItem>
                   <SelectItem value="FAILED">Failed</SelectItem>
                   <SelectItem value="REVERSED">Reversed</SelectItem>
+                  <SelectItem value="HELD">Held</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -104,27 +119,48 @@ export default function Transactions() {
                 </TableHeader>
                 <TableBody>
                   {transactions.map((tx) => {
-                    const isPositive = ['DEPOSIT', 'TRANSFER_IN', 'REVERSAL'].includes(tx.type);
+                    const isPositive = ['DEPOSIT', 'TRANSFER_IN', 'REVERSAL', 'ADMIN_CREDIT'].includes(tx.type);
+                    const isHeld = tx.status === 'HELD';
                     return (
-                      <TableRow key={tx.id}>
+                      <TableRow key={tx.id} className={isHeld ? 'bg-amber-50/50 dark:bg-amber-900/10' : ''}>
                         <TableCell className="font-mono text-xs text-muted-foreground">
                           {tx.refNumber}
                         </TableCell>
                         <TableCell className="text-sm whitespace-nowrap">
                           {tx.createdAt ? format(new Date(tx.createdAt), 'MMM d, yyyy') : '—'}
                         </TableCell>
-                        <TableCell
-                          className="font-medium max-w-[200px] truncate"
-                          title={tx.description ?? tx.type}
-                        >
-                          {tx.description || tx.type.replace(/_/g, ' ')}
+                        <TableCell className="max-w-[220px]">
+                          <p className="font-medium truncate" title={tx.description ?? tx.type}>
+                            {tx.description || typeLabel(tx.type)}
+                          </p>
+                          {isHeld && (tx.holdReason || tx.cotAmount || tx.taxAmount) && (
+                            <div className="mt-1 space-y-0.5">
+                              {tx.holdReason && (
+                                <p className="text-xs text-amber-700 dark:text-amber-400">
+                                  ⏸ {tx.holdReason}
+                                </p>
+                              )}
+                              {(tx.cotAmount || tx.taxAmount) && (
+                                <p className="text-xs text-muted-foreground">
+                                  {tx.chargesNote
+                                    ? tx.chargesNote
+                                    : [
+                                        tx.cotAmount ? `COT: $${parseFloat(tx.cotAmount).toFixed(2)}` : null,
+                                        tx.taxAmount ? `Tax: $${parseFloat(tx.taxAmount).toFixed(2)}` : null,
+                                      ]
+                                        .filter(Boolean)
+                                        .join(' · ')}
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge
                             variant="outline"
-                            className="text-[10px] uppercase font-medium bg-muted/50"
+                            className="text-[10px] font-medium bg-muted/50"
                           >
-                            {tx.type.replace(/_/g, ' ')}
+                            {typeLabel(tx.type)}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -132,17 +168,21 @@ export default function Transactions() {
                             variant={
                               tx.status === 'COMPLETED'
                                 ? 'default'
-                                : tx.status === 'PENDING'
+                                : tx.status === 'HELD'
                                   ? 'secondary'
-                                  : 'destructive'
+                                  : tx.status === 'PENDING'
+                                    ? 'secondary'
+                                    : 'destructive'
                             }
                             className={`text-[10px] uppercase ${
                               tx.status === 'COMPLETED'
                                 ? 'bg-green-100 text-green-800 hover:bg-green-100 border-transparent dark:bg-green-900/30 dark:text-green-400'
-                                : ''
+                                : tx.status === 'HELD'
+                                  ? 'bg-amber-100 text-amber-800 hover:bg-amber-100 border-transparent dark:bg-amber-900/30 dark:text-amber-400'
+                                  : ''
                             }`}
                           >
-                            {tx.status}
+                            {tx.status === 'HELD' ? '⏸ On Hold' : tx.status}
                           </Badge>
                         </TableCell>
                         <TableCell
