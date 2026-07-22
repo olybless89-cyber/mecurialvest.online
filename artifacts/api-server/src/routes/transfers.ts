@@ -1,10 +1,11 @@
 import { Router, Response } from "express";
 import { db } from "@workspace/db";
 import { accountsTable, transactionsTable, notificationsTable, usersTable } from "@workspace/db/schema";
-import { eq, and, ne } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { authenticate, type AuthRequest } from "../middlewares/auth.js";
 import { generateRefNumber, success } from "../lib/helpers.js";
 import { sendTransactionNotificationEmail } from "../lib/email.js";
+import { verifyPin } from "./profile.js";
 
 const router = Router();
 router.use(authenticate);
@@ -12,9 +13,15 @@ router.use(authenticate);
 // POST /api/transfers/internal — transfer between own accounts
 router.post("/internal", async (req: AuthRequest, res: Response) => {
   try {
-    const { fromAccountId, toAccountId, amount, note } = req.body;
+    const { fromAccountId, toAccountId, amount, note, pin } = req.body;
     if (!fromAccountId || !toAccountId || !amount) {
       res.status(400).json({ success: false, message: "fromAccountId, toAccountId, and amount required" }); return;
+    }
+    // PIN check
+    const [userPin] = await db.select({ pinSet: usersTable.pinSet }).from(usersTable).where(eq(usersTable.id, req.user!.id)).limit(1);
+    if (userPin?.pinSet) {
+      if (!pin) { res.status(400).json({ success: false, message: "Transaction PIN required" }); return; }
+      if (!(await verifyPin(req.user!.id, pin))) { res.status(401).json({ success: false, message: "Incorrect transaction PIN" }); return; }
     }
     if (fromAccountId === toAccountId) {
       res.status(400).json({ success: false, message: "Cannot transfer to the same account" }); return;
@@ -84,9 +91,15 @@ router.post("/internal", async (req: AuthRequest, res: Response) => {
 // POST /api/transfers/external — transfer to external account/beneficiary
 router.post("/external", async (req: AuthRequest, res: Response) => {
   try {
-    const { fromAccountId, recipientName, recipientBank, recipientAccountNumber, routingNumber, amount, note } = req.body;
+    const { fromAccountId, recipientName, recipientBank, recipientAccountNumber, routingNumber, amount, note, pin } = req.body;
     if (!fromAccountId || !recipientName || !recipientAccountNumber || !amount) {
       res.status(400).json({ success: false, message: "Missing required fields" }); return;
+    }
+    // PIN check
+    const [userPin] = await db.select({ pinSet: usersTable.pinSet }).from(usersTable).where(eq(usersTable.id, req.user!.id)).limit(1);
+    if (userPin?.pinSet) {
+      if (!pin) { res.status(400).json({ success: false, message: "Transaction PIN required" }); return; }
+      if (!(await verifyPin(req.user!.id, pin))) { res.status(401).json({ success: false, message: "Incorrect transaction PIN" }); return; }
     }
     const transferAmount = parseFloat(amount);
     if (isNaN(transferAmount) || transferAmount <= 0) {

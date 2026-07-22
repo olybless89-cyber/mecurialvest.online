@@ -4,7 +4,11 @@ import {
   useSuspendUser,
   useUnsuspendUser,
   useFundAccount,
+  useGetAdminUserAccounts,
+  useSuspendAccount,
+  useUnsuspendAccount,
   getListAdminUsersQueryKey,
+  getHeldTransactionsQueryKey,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -26,10 +30,92 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, MoreVertical, Ban, CheckCircle, DollarSign } from 'lucide-react';
+import { Search, MoreVertical, Ban, CheckCircle, DollarSign, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
+
+// Sub-component: shows accounts for a user with suspend/unsuspend actions
+function UserAccountsDialog({ userId, userName, open, onClose }: {
+  userId: number; userName: string; open: boolean; onClose: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const { data: userRes, isLoading } = useGetAdminUserAccounts(userId);
+  const accounts: any[] = (userRes as any)?.data?.accounts ?? [];
+
+  const suspendAcct = useSuspendAccount();
+  const unsuspendAcct = useUnsuspendAccount();
+
+  const toggleAccount = async (acct: any) => {
+    const suspend = acct.status === 'ACTIVE';
+    try {
+      if (suspend) {
+        await suspendAcct.mutateAsync({ id: acct.id });
+        toast.success(`Account …${acct.accountNumber.slice(-4)} suspended`);
+      } else {
+        await unsuspendAcct.mutateAsync({ id: acct.id });
+        toast.success(`Account …${acct.accountNumber.slice(-4)} unsuspended`);
+      }
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users/' + userId] });
+    } catch (e: any) {
+      toast.error(e?.message || 'Action failed');
+    }
+  };
+
+  const fmt = (v: any) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(parseFloat(v ?? '0'));
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Accounts — {userName}</DialogTitle>
+          <DialogDescription>Suspend or unsuspend individual accounts.</DialogDescription>
+        </DialogHeader>
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground py-4">Loading accounts…</p>
+        ) : accounts.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4">No accounts found.</p>
+        ) : (
+          <div className="space-y-2">
+            {accounts.map((acct: any) => (
+              <div key={acct.id} className="flex items-center justify-between border rounded-lg p-3">
+                <div>
+                  <p className="text-sm font-medium">
+                    {acct.accountType} — •••{acct.accountNumber.slice(-4)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{fmt(acct.balance)}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant={acct.status === 'ACTIVE' ? 'default' : 'destructive'}
+                    className="text-[10px]"
+                  >
+                    {acct.status}
+                  </Badge>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className={acct.status === 'ACTIVE' ? 'text-destructive' : 'text-green-600'}
+                    onClick={() => toggleAccount(acct)}
+                    disabled={suspendAcct.isPending || unsuspendAcct.isPending}
+                  >
+                    {acct.status === 'ACTIVE' ? <Ban className="h-3.5 w-3.5 mr-1" /> : <CheckCircle className="h-3.5 w-3.5 mr-1" />}
+                    {acct.status === 'ACTIVE' ? 'Suspend' : 'Unsuspend'}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function AdminUsers() {
   const queryClient = useQueryClient();
@@ -54,6 +140,8 @@ export default function AdminUsers() {
   const [fundAmount, setFundAmount] = useState('');
   const [fundAccountId, setFundAccountId] = useState('');
 
+  const [accountsUser, setAccountsUser] = useState<{ id: number; name: string } | null>(null);
+
   const users: any[] = (usersData as any)?.data?.items ?? [];
 
   const handleToggleSuspend = async (user: any) => {
@@ -72,12 +160,6 @@ export default function AdminUsers() {
     }
   };
 
-  const handleOpenFund = () => {
-    setFundAccountId('');
-    setFundAmount('');
-    setIsFundOpen(true);
-  };
-
   const handleFund = async () => {
     if (!fundAccountId || !fundAmount) {
       toast.error('Please fill all fields');
@@ -93,6 +175,7 @@ export default function AdminUsers() {
       });
       toast.success('Account funded successfully');
       setIsFundOpen(false);
+      queryClient.invalidateQueries({ queryKey: getHeldTransactionsQueryKey() });
     } catch (error: any) {
       toast.error(error?.message || 'Funding failed');
     }
@@ -102,7 +185,7 @@ export default function AdminUsers() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">User Management</h2>
-        <p className="text-muted-foreground">View and manage platform users.</p>
+        <p className="text-muted-foreground">View and manage platform users and their accounts.</p>
       </div>
 
       <Card>
@@ -117,7 +200,7 @@ export default function AdminUsers() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Button variant="outline" size="sm" onClick={handleOpenFund}>
+            <Button variant="outline" size="sm" onClick={() => { setFundAccountId(''); setFundAmount(''); setIsFundOpen(true); }}>
               <DollarSign className="mr-2 h-4 w-4" /> Fund Account
             </Button>
           </div>
@@ -136,39 +219,30 @@ export default function AdminUsers() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">
-                    Loading…
-                  </TableCell>
+                  <TableCell colSpan={5} className="text-center h-24">Loading…</TableCell>
                 </TableRow>
               ) : users.length > 0 ? (
                 users.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="font-medium">
-                          {user.firstName} {user.lastName}
-                        </span>
+                        <span className="font-medium">{user.firstName} {user.lastName}</span>
                         <span className="text-xs text-muted-foreground">{user.email}</span>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="text-[10px]">
-                        {user.role}
-                      </Badge>
+                      <Badge variant="outline" className="text-[10px]">{user.role}</Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2 items-center">
                         <Badge
-                          variant={user.status === 'ACTIVE' ? 'default' : 'destructive'}
+                          variant={user.isSuspended ? 'destructive' : 'default'}
                           className="text-[10px]"
                         >
-                          {user.status}
+                          {user.isSuspended ? 'SUSPENDED' : 'ACTIVE'}
                         </Badge>
                         {user.isEmailVerified && (
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
-                          >
+                          <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
                             Verified
                           </Badge>
                         )}
@@ -186,19 +260,19 @@ export default function AdminUsers() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            onClick={() => handleToggleSuspend(user)}
-                            className={
-                              user.status === 'ACTIVE' ? 'text-destructive' : 'text-green-600'
-                            }
+                            onClick={() => setAccountsUser({ id: user.id, name: `${user.firstName} ${user.lastName}` })}
                           >
-                            {user.status === 'ACTIVE' ? (
-                              <>
-                                <Ban className="mr-2 h-4 w-4" /> Suspend User
-                              </>
+                            <Wallet className="mr-2 h-4 w-4" /> Manage Accounts
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handleToggleSuspend(user)}
+                            className={user.isSuspended ? 'text-green-600' : 'text-destructive'}
+                          >
+                            {user.isSuspended ? (
+                              <><CheckCircle className="mr-2 h-4 w-4" /> Unsuspend User</>
                             ) : (
-                              <>
-                                <CheckCircle className="mr-2 h-4 w-4" /> Unsuspend User
-                              </>
+                              <><Ban className="mr-2 h-4 w-4" /> Suspend User</>
                             )}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -208,9 +282,7 @@ export default function AdminUsers() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">
-                    No users found.
-                  </TableCell>
+                  <TableCell colSpan={5} className="text-center h-24">No users found.</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -223,44 +295,38 @@ export default function AdminUsers() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Fund Account</DialogTitle>
-            <DialogDescription>
-              Add funds directly to an account by its numeric ID.
-            </DialogDescription>
+            <DialogDescription>Add funds directly to an account by its numeric ID.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <Label>Target Account ID</Label>
-              <Input
-                type="number"
-                placeholder="e.g. 5"
-                value={fundAccountId}
-                onChange={(e) => setFundAccountId(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Enter the numeric account ID from the database.
-              </p>
+              <Input type="number" placeholder="e.g. 5" value={fundAccountId}
+                onChange={(e) => setFundAccountId(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>Amount (USD)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="1000.00"
-                value={fundAmount}
-                onChange={(e) => setFundAmount(e.target.value)}
-              />
+              <Input type="number" step="0.01" placeholder="1000.00" value={fundAmount}
+                onChange={(e) => setFundAmount(e.target.value)} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsFundOpen(false)}>
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setIsFundOpen(false)}>Cancel</Button>
             <Button onClick={handleFund} disabled={fundMutation.isPending}>
               {fundMutation.isPending ? 'Processing…' : 'Add Funds'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Accounts Dialog */}
+      {accountsUser && (
+        <UserAccountsDialog
+          userId={accountsUser.id}
+          userName={accountsUser.name}
+          open={!!accountsUser}
+          onClose={() => setAccountsUser(null)}
+        />
+      )}
     </div>
   );
 }

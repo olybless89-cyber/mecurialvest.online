@@ -1,13 +1,13 @@
-import { pgTable, serial, text, numeric, integer, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, numeric, integer, timestamp, boolean, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { accountsTable } from "./accounts";
 import { usersTable } from "./users";
 
 export const transactionTypeEnum = pgEnum("transaction_type", [
-  "DEPOSIT", "WITHDRAWAL", "TRANSFER_IN", "TRANSFER_OUT", "FEE", "INTEREST", "REVERSAL"
+  "DEPOSIT", "WITHDRAWAL", "TRANSFER_IN", "TRANSFER_OUT", "FEE", "INTEREST", "REVERSAL", "ADMIN_CREDIT"
 ]);
-export const transactionStatusEnum = pgEnum("transaction_status", ["PENDING", "COMPLETED", "FAILED", "REVERSED"]);
+export const transactionStatusEnum = pgEnum("transaction_status", ["PENDING", "COMPLETED", "FAILED", "REVERSED", "HELD"]);
 
 export const transactionsTable = pgTable("transactions", {
   id: serial("id").primaryKey(),
@@ -31,6 +31,17 @@ export const transactionsTable = pgTable("transactions", {
   ipAddress: text("ip_address"),
   reversedAt: timestamp("reversed_at"),
   reversedBy: integer("reversed_by"),
+  // Hold / release fields
+  heldBy: integer("held_by"),
+  holdReason: text("hold_reason"),
+  releasedAt: timestamp("released_at"),
+  releasedBy: integer("released_by"),
+  // COT & TAX charges (required before release)
+  cotAmount: numeric("cot_amount", { precision: 18, scale: 2 }),
+  taxAmount: numeric("tax_amount", { precision: 18, scale: 2 }),
+  cotPaid: boolean("cot_paid").default(false).notNull(),
+  taxPaid: boolean("tax_paid").default(false).notNull(),
+  chargesNote: text("charges_note"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

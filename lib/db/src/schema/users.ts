@@ -31,6 +31,8 @@ export const usersTable = pgTable("users", {
   resetPasswordExpires: timestamp("reset_password_expires"),
   twoFactorEnabled: boolean("two_factor_enabled").default(false).notNull(),
   twoFactorSecret: text("two_factor_secret"),
+  pinHash: text("pin_hash"),
+  pinSet: boolean("pin_set").default(false).notNull(),
   lastLoginAt: timestamp("last_login_at"),
   lastLoginIp: text("last_login_ip"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

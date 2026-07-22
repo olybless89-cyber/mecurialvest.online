@@ -30,6 +30,7 @@ import Settings from '@/pages/Settings';
 import AdminDashboard from '@/pages/admin/AdminDashboard';
 import AdminUsers from '@/pages/admin/AdminUsers';
 import AdminTransactions from '@/pages/admin/AdminTransactions';
+import AdminHeldPayments from '@/pages/admin/AdminHeldPayments';
 import AdminAuditLogs from '@/pages/admin/AdminAuditLogs';
 
 // Fallback
@@ -93,6 +94,9 @@ function Router() {
       </Route>
       <Route path="/admin/transactions">
         <ProtectedRoute adminOnly><ProtectedLayout><AdminTransactions /></ProtectedLayout></ProtectedRoute>
+      </Route>
+      <Route path="/admin/held-payments">
+        <ProtectedRoute adminOnly><ProtectedLayout><AdminHeldPayments /></ProtectedLayout></ProtectedRoute>
       </Route>
       <Route path="/admin/audit-logs">
         <ProtectedRoute adminOnly><ProtectedLayout><AdminAuditLogs /></ProtectedLayout></ProtectedRoute>

@@ -209,6 +209,180 @@ router.post("/transactions/:id/reverse", async (req: AuthRequest, res: Response)
   }
 });
 
+// POST /api/admin/send-payment — admin sends payment to any account, optionally held
+router.post("/send-payment", async (req: AuthRequest, res: Response) => {
+  try {
+    const { accountId, amount, description, hold, holdReason, cotAmount, taxAmount, chargesNote } = req.body;
+    if (!accountId || !amount) { res.status(400).json({ success: false, message: "accountId and amount required" }); return; }
+    const fundAmount = parseFloat(amount);
+    if (isNaN(fundAmount) || fundAmount <= 0) { res.status(400).json({ success: false, message: "Invalid amount" }); return; }
+
+    const [account] = await db.select().from(accountsTable).where(eq(accountsTable.id, accountId)).limit(1);
+    if (!account) { res.status(404).json({ success: false, message: "Account not found" }); return; }
+
+    const balanceBefore = parseFloat(account.balance);
+    // If held, balance does NOT change yet; if not held, credit immediately
+    const balanceAfter = hold ? balanceBefore : balanceBefore + fundAmount;
+    const txStatus = hold ? "HELD" : "COMPLETED";
+
+    await db.transaction(async (tx) => {
+      if (!hold) {
+        await tx.update(accountsTable).set({ balance: balanceAfter.toFixed(2), updatedAt: new Date() }).where(eq(accountsTable.id, accountId));
+      }
+      await tx.insert(transactionsTable).values({
+        accountId, userId: account.userId, refNumber: generateRefNumber(),
+        type: "ADMIN_CREDIT", amount: fundAmount.toFixed(2),
+        balanceBefore: balanceBefore.toFixed(2), balanceAfter: balanceAfter.toFixed(2),
+        description: description || (hold ? "Admin payment (held)" : "Admin credit"),
+        status: txStatus as never,
+        heldBy: hold ? req.user!.id : null,
+        holdReason: hold ? (holdReason || null) : null,
+        cotAmount: cotAmount ? parseFloat(cotAmount).toFixed(2) : null,
+        taxAmount: taxAmount ? parseFloat(taxAmount).toFixed(2) : null,
+        chargesNote: chargesNote || null,
+        ipAddress: req.ip || null,
+      });
+      await tx.insert(notificationsTable).values({
+        userId: account.userId,
+        type: "TRANSACTION",
+        title: hold ? "Incoming Payment On Hold" : "Account Credited",
+        message: hold
+          ? `A payment of $${fundAmount.toFixed(2)} has been credited to your account but is currently on hold.${cotAmount ? ` COT fee: $${parseFloat(cotAmount).toFixed(2)}.` : ''}${taxAmount ? ` Tax: $${parseFloat(taxAmount).toFixed(2)}.` : ''} Contact support for details.`
+          : `Your account has been credited with $${fundAmount.toFixed(2)}.`,
+      });
+      await tx.insert(auditLogsTable).values({
+        adminId: req.user!.id, action: hold ? "SEND_PAYMENT_HELD" : "SEND_PAYMENT",
+        entity: "account", entityId: String(accountId),
+        newValues: JSON.stringify({ amount: fundAmount, hold, cotAmount, taxAmount }),
+        ipAddress: req.ip || null,
+      });
+    });
+    res.json(success({ status: txStatus }, hold ? "Payment sent and placed on hold" : "Payment sent successfully"));
+  } catch {
+    res.status(500).json({ success: false, message: "Failed to send payment" });
+  }
+});
+
+// POST /api/admin/transactions/:id/hold
+router.post("/transactions/:id/hold", async (req: AuthRequest, res: Response) => {
+  try {
+    const txnId = parseInt(req.params["id"]!);
+    const { holdReason } = req.body;
+    const [txn] = await db.select().from(transactionsTable).where(eq(transactionsTable.id, txnId)).limit(1);
+    if (!txn) { res.status(404).json({ success: false, message: "Transaction not found" }); return; }
+    if (txn.status === "HELD") { res.status(400).json({ success: false, message: "Already on hold" }); return; }
+    await db.update(transactionsTable).set({ status: "HELD" as never, heldBy: req.user!.id, holdReason: holdReason || null, updatedAt: new Date() }).where(eq(transactionsTable.id, txnId));
+    await db.insert(auditLogsTable).values({ adminId: req.user!.id, action: "HOLD_TRANSACTION", entity: "transaction", entityId: String(txnId), ipAddress: req.ip || null });
+    res.json(success(null, "Transaction placed on hold"));
+  } catch {
+    res.status(500).json({ success: false, message: "Failed to hold transaction" });
+  }
+});
+
+// POST /api/admin/transactions/:id/release
+router.post("/transactions/:id/release", async (req: AuthRequest, res: Response) => {
+  try {
+    const txnId = parseInt(req.params["id"]!);
+    const [txn] = await db.select().from(transactionsTable).where(eq(transactionsTable.id, txnId)).limit(1);
+    if (!txn) { res.status(404).json({ success: false, message: "Transaction not found" }); return; }
+    if (txn.status !== "HELD") { res.status(400).json({ success: false, message: "Transaction is not on hold" }); return; }
+
+    const [account] = await db.select().from(accountsTable).where(eq(accountsTable.id, txn.accountId)).limit(1);
+    if (!account) { res.status(404).json({ success: false, message: "Account not found" }); return; }
+
+    // Credit the held amount to the account balance
+    const currentBalance = parseFloat(account.balance);
+    const heldAmount = parseFloat(txn.amount);
+    const newBalance = currentBalance + heldAmount;
+
+    await db.transaction(async (tx) => {
+      await tx.update(accountsTable).set({ balance: newBalance.toFixed(2), updatedAt: new Date() }).where(eq(accountsTable.id, txn.accountId));
+      await tx.update(transactionsTable).set({
+        status: "COMPLETED" as never,
+        releasedBy: req.user!.id,
+        releasedAt: new Date(),
+        balanceAfter: newBalance.toFixed(2),
+        updatedAt: new Date(),
+      }).where(eq(transactionsTable.id, txnId));
+      await tx.insert(notificationsTable).values({
+        userId: txn.userId, type: "TRANSACTION",
+        title: "Funds Released",
+        message: `Your held payment of $${heldAmount.toFixed(2)} has been released and is now available in your account.`,
+      });
+      await tx.insert(auditLogsTable).values({ adminId: req.user!.id, action: "RELEASE_TRANSACTION", entity: "transaction", entityId: String(txnId), ipAddress: req.ip || null });
+    });
+    res.json(success(null, "Transaction released successfully"));
+  } catch {
+    res.status(500).json({ success: false, message: "Failed to release transaction" });
+  }
+});
+
+// POST /api/admin/transactions/:id/set-charges — set COT / TAX amounts
+router.post("/transactions/:id/set-charges", async (req: AuthRequest, res: Response) => {
+  try {
+    const txnId = parseInt(req.params["id"]!);
+    const { cotAmount, taxAmount, chargesNote, cotPaid, taxPaid } = req.body;
+    const [txn] = await db.select().from(transactionsTable).where(eq(transactionsTable.id, txnId)).limit(1);
+    if (!txn) { res.status(404).json({ success: false, message: "Transaction not found" }); return; }
+
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
+    if (cotAmount !== undefined) updates.cotAmount = cotAmount !== null ? parseFloat(cotAmount).toFixed(2) : null;
+    if (taxAmount !== undefined) updates.taxAmount = taxAmount !== null ? parseFloat(taxAmount).toFixed(2) : null;
+    if (chargesNote !== undefined) updates.chargesNote = chargesNote || null;
+    if (cotPaid !== undefined) updates.cotPaid = !!cotPaid;
+    if (taxPaid !== undefined) updates.taxPaid = !!taxPaid;
+
+    await db.update(transactionsTable).set(updates as never).where(eq(transactionsTable.id, txnId));
+
+    // Notify user if charges were set
+    if ((cotAmount || taxAmount) && txn.status === "HELD") {
+      await db.insert(notificationsTable).values({
+        userId: txn.userId, type: "TRANSACTION",
+        title: "Charges Required to Release Funds",
+        message: `To release your held payment of $${parseFloat(txn.amount).toFixed(2)}, the following charges must be settled:${cotAmount ? ` COT: $${parseFloat(cotAmount).toFixed(2)}` : ''}${taxAmount ? ` Tax: $${parseFloat(taxAmount).toFixed(2)}` : ''}. ${chargesNote || 'Contact support for payment instructions.'}`,
+      });
+    }
+    await db.insert(auditLogsTable).values({ adminId: req.user!.id, action: "SET_CHARGES", entity: "transaction", entityId: String(txnId), newValues: JSON.stringify({ cotAmount, taxAmount }), ipAddress: req.ip || null });
+    res.json(success(null, "Charges updated"));
+  } catch {
+    res.status(500).json({ success: false, message: "Failed to set charges" });
+  }
+});
+
+// POST /api/admin/accounts/:id/suspend
+router.post("/accounts/:id/suspend", async (req: AuthRequest, res: Response) => {
+  try {
+    const accountId = parseInt(req.params["id"]!);
+    await db.update(accountsTable).set({ status: "FROZEN" as never, updatedAt: new Date() }).where(eq(accountsTable.id, accountId));
+    await db.insert(auditLogsTable).values({ adminId: req.user!.id, action: "SUSPEND_ACCOUNT", entity: "account", entityId: String(accountId), ipAddress: req.ip || null });
+    res.json(success(null, "Account suspended"));
+  } catch {
+    res.status(500).json({ success: false, message: "Failed to suspend account" });
+  }
+});
+
+// POST /api/admin/accounts/:id/unsuspend
+router.post("/accounts/:id/unsuspend", async (req: AuthRequest, res: Response) => {
+  try {
+    const accountId = parseInt(req.params["id"]!);
+    await db.update(accountsTable).set({ status: "ACTIVE" as never, updatedAt: new Date() }).where(eq(accountsTable.id, accountId));
+    await db.insert(auditLogsTable).values({ adminId: req.user!.id, action: "UNSUSPEND_ACCOUNT", entity: "account", entityId: String(accountId), ipAddress: req.ip || null });
+    res.json(success(null, "Account unsuspended"));
+  } catch {
+    res.status(500).json({ success: false, message: "Failed to unsuspend account" });
+  }
+});
+
+// GET /api/admin/held-transactions
+router.get("/held-transactions", async (_req: AuthRequest, res: Response) => {
+  try {
+    const txns = await db.select().from(transactionsTable).where(eq(transactionsTable.status, "HELD" as never)).orderBy(desc(transactionsTable.createdAt));
+    res.json(success(txns));
+  } catch {
+    res.status(500).json({ success: false, message: "Failed to fetch held transactions" });
+  }
+});
+
 // GET /api/admin/audit-logs
 router.get("/audit-logs", async (_req: AuthRequest, res: Response) => {
   try {

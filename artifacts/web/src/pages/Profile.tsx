@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -6,7 +6,10 @@ import {
   useGetProfile,
   useUpdateProfile,
   useChangePassword,
+  useGetPinStatus,
+  useSetPin,
   getGetProfileQueryKey,
+  getPinStatusQueryKey,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,8 +18,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { ShieldCheck, KeyRound } from 'lucide-react';
 
 const profileSchema = z.object({
   firstName: z.string().min(2, 'First name required'),
@@ -42,33 +47,47 @@ const passwordSchema = z
     path: ['confirmPassword'],
   });
 
+const setPinSchema = z
+  .object({
+    pin: z.string().regex(/^\d{4,6}$/, 'PIN must be 4–6 digits'),
+    confirmPin: z.string(),
+    // For first-time setup
+    password: z.string().optional(),
+    // For change
+    oldPin: z.string().optional(),
+  })
+  .refine((d) => d.pin === d.confirmPin, { message: "PINs don't match", path: ['confirmPin'] });
+
 export default function Profile() {
   const queryClient = useQueryClient();
   const { data: profileRes, isLoading } = useGetProfile();
   const profile = profileRes?.data;
 
+  const { data: pinStatusRes } = useGetPinStatus();
+  const pinSet = (pinStatusRes as any)?.data?.pinSet ?? false;
+
+  const [showPinForm, setShowPinForm] = useState(false);
+
   const updateMutation = useUpdateProfile();
   const passwordMutation = useChangePassword();
+  const setPinMutation = useSetPin();
 
   const profileForm = useForm({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      firstName: '',
-      lastName: '',
-      middleName: '',
-      phone: '',
-      dateOfBirth: '',
-      address: '',
-      city: '',
-      state: '',
-      country: '',
-      occupation: '',
+      firstName: '', lastName: '', middleName: '', phone: '', dateOfBirth: '',
+      address: '', city: '', state: '', country: '', occupation: '',
     },
   });
 
   const passwordForm = useForm({
     resolver: zodResolver(passwordSchema),
     defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
+  });
+
+  const pinForm = useForm({
+    resolver: zodResolver(setPinSchema),
+    defaultValues: { pin: '', confirmPin: '', password: '', oldPin: '' },
   });
 
   useEffect(() => {
@@ -78,9 +97,7 @@ export default function Profile() {
         lastName: profile.lastName || '',
         middleName: (profile as any).middleName || '',
         phone: (profile as any).phone || '',
-        dateOfBirth: (profile as any).dateOfBirth
-          ? (profile as any).dateOfBirth.split('T')[0]
-          : '',
+        dateOfBirth: (profile as any).dateOfBirth ? (profile as any).dateOfBirth.split('T')[0] : '',
         address: (profile as any).address || '',
         city: (profile as any).city || '',
         state: (profile as any).state || '',
@@ -112,20 +129,29 @@ export default function Profile() {
     }
   };
 
+  const onPinSubmit = async (data: any) => {
+    try {
+      await setPinMutation.mutateAsync({
+        pin: data.pin,
+        confirmPin: data.confirmPin,
+        password: pinSet ? undefined : data.password,
+        oldPin: pinSet ? data.oldPin : undefined,
+      });
+      toast.success(pinSet ? 'Transaction PIN changed' : 'Transaction PIN set successfully');
+      pinForm.reset();
+      setShowPinForm(false);
+      queryClient.invalidateQueries({ queryKey: getPinStatusQueryKey() });
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to set PIN');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6 max-w-4xl mx-auto">
         <Skeleton className="h-8 w-48 mb-6" />
-        <Card>
-          <CardContent className="p-6">
-            <Skeleton className="h-64 w-full" />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <Skeleton className="h-48 w-full" />
-          </CardContent>
-        </Card>
+        <Card><CardContent className="p-6"><Skeleton className="h-64 w-full" /></CardContent></Card>
+        <Card><CardContent className="p-6"><Skeleton className="h-48 w-full" /></CardContent></Card>
       </div>
     );
   }
@@ -134,12 +160,11 @@ export default function Profile() {
     <div className="space-y-6 max-w-4xl mx-auto">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Profile</h2>
-        <p className="text-muted-foreground">
-          Manage your personal information and security settings.
-        </p>
+        <p className="text-muted-foreground">Manage your personal information and security settings.</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
+        {/* LEFT: Personal Info */}
         <div className="md:col-span-2 space-y-6">
           <Card>
             <CardHeader>
@@ -158,7 +183,6 @@ export default function Profile() {
                     <Input {...profileForm.register('lastName')} />
                   </div>
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Middle Name (Optional)</Label>
@@ -169,19 +193,15 @@ export default function Profile() {
                     <Input type="date" {...profileForm.register('dateOfBirth')} />
                   </div>
                 </div>
-
                 <div className="space-y-2">
                   <Label>Phone Number</Label>
                   <Input type="tel" {...profileForm.register('phone')} />
                 </div>
-
                 <Separator className="my-4" />
-
                 <div className="space-y-2">
                   <Label>Street Address</Label>
                   <Input {...profileForm.register('address')} />
                 </div>
-
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>City</Label>
@@ -196,12 +216,10 @@ export default function Profile() {
                     <Input {...profileForm.register('country')} />
                   </div>
                 </div>
-
                 <div className="space-y-2">
                   <Label>Occupation</Label>
                   <Input {...profileForm.register('occupation')} />
                 </div>
-
                 <div className="pt-4 flex justify-end">
                   <Button type="submit" disabled={updateMutation.isPending}>
                     {updateMutation.isPending ? 'Saving…' : 'Save Changes'}
@@ -212,11 +230,13 @@ export default function Profile() {
           </Card>
         </div>
 
+        {/* RIGHT: Security */}
         <div className="space-y-6">
+          {/* Password */}
           <Card>
             <CardHeader>
               <CardTitle>Security</CardTitle>
-              <CardDescription>Change your password.</CardDescription>
+              <CardDescription>Change your login password.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
@@ -224,60 +244,130 @@ export default function Profile() {
                   <Label>Current Password</Label>
                   <Input type="password" {...passwordForm.register('currentPassword')} />
                   {passwordForm.formState.errors.currentPassword && (
-                    <p className="text-xs text-destructive">
-                      {passwordForm.formState.errors.currentPassword.message as string}
-                    </p>
+                    <p className="text-xs text-destructive">{passwordForm.formState.errors.currentPassword.message as string}</p>
                   )}
                 </div>
                 <div className="space-y-2">
                   <Label>New Password</Label>
                   <Input type="password" {...passwordForm.register('newPassword')} />
                   {passwordForm.formState.errors.newPassword && (
-                    <p className="text-xs text-destructive">
-                      {passwordForm.formState.errors.newPassword.message as string}
-                    </p>
+                    <p className="text-xs text-destructive">{passwordForm.formState.errors.newPassword.message as string}</p>
                   )}
                 </div>
                 <div className="space-y-2">
                   <Label>Confirm Password</Label>
                   <Input type="password" {...passwordForm.register('confirmPassword')} />
                   {passwordForm.formState.errors.confirmPassword && (
-                    <p className="text-xs text-destructive">
-                      {passwordForm.formState.errors.confirmPassword.message as string}
-                    </p>
+                    <p className="text-xs text-destructive">{passwordForm.formState.errors.confirmPassword.message as string}</p>
                   )}
                 </div>
-                <div className="pt-2">
-                  <Button type="submit" className="w-full" disabled={passwordMutation.isPending}>
-                    {passwordMutation.isPending ? 'Updating…' : 'Update Password'}
-                  </Button>
-                </div>
+                <Button type="submit" className="w-full" disabled={passwordMutation.isPending}>
+                  {passwordMutation.isPending ? 'Updating…' : 'Update Password'}
+                </Button>
               </form>
             </CardContent>
           </Card>
 
+          {/* Transaction PIN */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <KeyRound className="h-4 w-4" /> Transaction PIN
+              </CardTitle>
+              <CardDescription>
+                Required for all transfers. Keep it secret.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Status</span>
+                <Badge variant={pinSet ? 'default' : 'secondary'} className="flex items-center gap-1">
+                  {pinSet ? <><ShieldCheck className="h-3 w-3" /> PIN Set</> : 'Not Set'}
+                </Badge>
+              </div>
+
+              {!showPinForm ? (
+                <Button variant="outline" className="w-full" onClick={() => setShowPinForm(true)}>
+                  {pinSet ? 'Change PIN' : 'Set Transaction PIN'}
+                </Button>
+              ) : (
+                <form onSubmit={pinForm.handleSubmit(onPinSubmit)} className="space-y-3">
+                  {pinSet ? (
+                    <div className="space-y-2">
+                      <Label>Current PIN</Label>
+                      <Input
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="••••"
+                        {...pinForm.register('oldPin')}
+                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label>Account Password</Label>
+                      <Input
+                        type="password"
+                        placeholder="Verify your identity"
+                        {...pinForm.register('password')}
+                      />
+                      {pinForm.formState.errors.password && (
+                        <p className="text-xs text-destructive">{pinForm.formState.errors.password.message as string}</p>
+                      )}
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label>New PIN (4–6 digits)</Label>
+                    <Input
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="••••"
+                      {...pinForm.register('pin')}
+                    />
+                    {pinForm.formState.errors.pin && (
+                      <p className="text-xs text-destructive">{pinForm.formState.errors.pin.message as string}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Confirm PIN</Label>
+                    <Input
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="••••"
+                      {...pinForm.register('confirmPin')}
+                    />
+                    {pinForm.formState.errors.confirmPin && (
+                      <p className="text-xs text-destructive">{pinForm.formState.errors.confirmPin.message as string}</p>
+                    )}
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <Button type="button" variant="outline" className="flex-1" onClick={() => { setShowPinForm(false); pinForm.reset(); }}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" className="flex-1" disabled={setPinMutation.isPending}>
+                      {setPinMutation.isPending ? 'Saving…' : 'Save PIN'}
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Account Status */}
           <Card className="bg-muted/50">
             <CardContent className="p-6 space-y-2">
               <h3 className="font-medium text-sm">Account Status</h3>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Verification</span>
-                <span
-                  className={
-                    profile?.isEmailVerified
-                      ? 'text-green-600 font-medium'
-                      : 'text-yellow-600 font-medium'
-                  }
-                >
+                <span className={profile?.isEmailVerified ? 'text-green-600 font-medium' : 'text-yellow-600 font-medium'}>
                   {profile?.isEmailVerified ? 'Verified' : 'Unverified'}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Joined</span>
-                <span>
-                  {profile?.createdAt
-                    ? format(new Date(profile.createdAt), 'MMMM yyyy')
-                    : '—'}
-                </span>
+                <span>{profile?.createdAt ? format(new Date(profile.createdAt), 'MMMM yyyy') : '—'}</span>
               </div>
             </CardContent>
           </Card>

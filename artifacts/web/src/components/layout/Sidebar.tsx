@@ -12,7 +12,8 @@ import {
   ShieldAlert,
   UsersRound,
   History,
-  FileText
+  FileText,
+  PauseCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getUser } from '@/lib/auth';
@@ -31,6 +32,7 @@ const ADMIN_ITEMS = [
   { href: '/admin', label: 'Admin Dashboard', icon: ShieldAlert },
   { href: '/admin/users', label: 'Users', icon: UsersRound },
   { href: '/admin/transactions', label: 'All Transactions', icon: History },
+  { href: '/admin/held-payments', label: 'Held Payments', icon: PauseCircle },
   { href: '/admin/audit-logs', label: 'Audit Logs', icon: FileText },
 ];
 
