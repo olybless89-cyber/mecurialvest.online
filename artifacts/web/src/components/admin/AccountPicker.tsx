@@ -118,8 +118,8 @@ export function AccountPicker({ value, onChange, label = 'Target Account' }: Pro
   }, [search]);
 
   const { data: usersRes, isLoading } = useListAdminUsers(
-    debounced ? ({ search: debounced, limit: 8 } as any) : ({ limit: 0 } as any),
-    { enabled: debounced.length >= 2 } as any,
+    { search: debounced || undefined, limit: 8 },
+    { query: { enabled: debounced.length >= 2 } },
   );
   const users: any[] = (usersRes as any)?.data?.items ?? [];
 
