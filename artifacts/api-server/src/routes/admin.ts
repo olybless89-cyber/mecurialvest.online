@@ -17,7 +17,12 @@ router.get("/stats", async (_req: AuthRequest, res: Response) => {
       db.select({ total: count() }).from(transactionsTable),
       db.select({ sum: sql<string>`COALESCE(SUM(balance), 0)` }).from(accountsTable),
     ]);
-    res.json(success({ users, accounts, transactions: txns, totalFunds: totalFunds.sum }));
+    res.json(success({
+      users: { total: Number(users.total), active: String(users.active) },
+      accounts: { total: Number(accounts.total) },
+      transactions: { total: Number(txns.total) },
+      totalFunds: totalFunds.sum,
+    }));
   } catch {
     res.status(500).json({ success: false, message: "Failed to fetch stats" });
   }
@@ -44,7 +49,8 @@ router.get("/users", async (req: AuthRequest, res: Response) => {
       }).from(usersTable).where(where).orderBy(desc(usersTable.createdAt)).limit(limit).offset(offset),
       db.select({ total: count() }).from(usersTable).where(where),
     ]);
-    res.json(success({ items: users, pagination: { total, page, limit, totalPages: Math.ceil(total / limit) } }));
+    const t = Number(total);
+    res.json(success({ items: users, pagination: { total: t, page, limit, totalPages: Math.ceil(t / limit) } }));
   } catch {
     res.status(500).json({ success: false, message: "Failed to fetch users" });
   }
@@ -162,7 +168,8 @@ router.get("/transactions", async (req: AuthRequest, res: Response) => {
       db.select().from(transactionsTable).orderBy(desc(transactionsTable.createdAt)).limit(limit).offset(offset),
       db.select({ total: count() }).from(transactionsTable),
     ]);
-    res.json(success({ items: txns, pagination: { total, page, limit, totalPages: Math.ceil(total / limit) } }));
+    const t = Number(total);
+    res.json(success({ items: txns, pagination: { total: t, page, limit, totalPages: Math.ceil(t / limit) } }));
   } catch {
     res.status(500).json({ success: false, message: "Failed to fetch transactions" });
   }
@@ -212,7 +219,8 @@ router.get("/audit-logs", async (_req: AuthRequest, res: Response) => {
       db.select().from(auditLogsTable).orderBy(desc(auditLogsTable.createdAt)).limit(limit).offset(offset),
       db.select({ total: count() }).from(auditLogsTable),
     ]);
-    res.json(success({ items: logs, pagination: { total, page, limit, totalPages: Math.ceil(total / limit) } }));
+    const t = Number(total);
+    res.json(success({ items: logs, pagination: { total: t, page, limit, totalPages: Math.ceil(t / limit) } }));
   } catch {
     res.status(500).json({ success: false, message: "Failed to fetch audit logs" });
   }

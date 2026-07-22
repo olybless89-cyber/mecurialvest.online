@@ -37,7 +37,8 @@ router.get("/", async (req: AuthRequest, res: Response) => {
       db.select({ total: count() }).from(transactionsTable).where(where),
     ]);
 
-    res.json(success({ items: txns, pagination: { total, page, limit, totalPages: Math.ceil(total / limit) } }));
+    const t = Number(total);
+    res.json(success({ items: txns, pagination: { total: t, page, limit, totalPages: Math.ceil(t / limit) } }));
   } catch {
     res.status(500).json({ success: false, message: "Failed to fetch transactions" });
   }
@@ -56,7 +57,7 @@ router.get("/summary", async (req: AuthRequest, res: Response) => {
         gte(transactionsTable.createdAt, new Date(new Date().setDate(1))),
       )
     );
-    res.json(success({ monthlyIncome: row.totalIn, monthlyExpenses: row.totalOut, transactionCount: row.count }));
+    res.json(success({ monthlyIncome: row.totalIn, monthlyExpenses: row.totalOut, transactionCount: Number(row.count) }));
   } catch {
     res.status(500).json({ success: false, message: "Failed to fetch summary" });
   }

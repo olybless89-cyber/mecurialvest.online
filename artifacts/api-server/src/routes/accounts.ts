@@ -27,7 +27,7 @@ router.get("/stats", async (req: AuthRequest, res: Response) => {
       .select({ total: sql<string>`COALESCE(SUM(balance), 0)`, count: count() })
       .from(accountsTable)
       .where(and(eq(accountsTable.userId, req.user!.id), eq(accountsTable.status, "ACTIVE")));
-    res.json(success({ totalBalance: row.total, accountCount: row.count }));
+    res.json(success({ totalBalance: row.total, accountCount: Number(row.count) }));
   } catch {
     res.status(500).json({ success: false, message: "Failed to fetch stats" });
   }
@@ -128,7 +128,8 @@ router.get("/:id/transactions", async (req: AuthRequest, res: Response) => {
       db.select({ total: count() }).from(transactionsTable).where(eq(transactionsTable.accountId, acct.id)),
     ]);
 
-    res.json(success({ items: txns, pagination: { total, page, limit, totalPages: Math.ceil(total / limit) } }));
+    const t = Number(total);
+    res.json(success({ items: txns, pagination: { total: t, page, limit, totalPages: Math.ceil(t / limit) } }));
   } catch {
     res.status(500).json({ success: false, message: "Failed to fetch transactions" });
   }
