@@ -37,7 +37,7 @@ export default function Login() {
         setToken(token);
         setRefreshToken(response.data?.refreshToken ?? (response as any).refreshToken);
         setUser(response.data?.user ?? (response as any).user);
-        toast.success('Welcome back to OrcaBank');
+        toast.success('Welcome back to MercurialVest');
         setLocation('/dashboard');
       }
     } catch (error: any) {

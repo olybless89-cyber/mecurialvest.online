@@ -89,9 +89,9 @@ export default function Landing() {
         <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
             <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-xs">OB</div>
-            <span className="font-semibold">OrcaBank</span>
+            <span className="font-semibold">MercurialVest</span>
           </div>
-          <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} OrcaBank Inc. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} MercurialVest Inc. All rights reserved.</p>
           <div className="flex gap-4 text-sm text-muted-foreground">
             <a href="#" className="hover:text-foreground">Privacy</a>
             <a href="#" className="hover:text-foreground">Terms</a>

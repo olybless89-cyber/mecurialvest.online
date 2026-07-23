@@ -7,7 +7,7 @@ export function OrcaBankLogo() {
       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold group-hover:scale-105 transition-transform">
         OB
       </div>
-      <span className="font-bold text-xl tracking-tight text-foreground">OrcaBank</span>
+      <span className="font-bold text-xl tracking-tight text-foreground">MercurialVest</span>
     </Link>
   );
 }

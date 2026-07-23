@@ -187,7 +187,7 @@ export default function Transfer() {
           <Card>
             <CardHeader>
               <CardTitle>Transfer Between Accounts</CardTitle>
-              <CardDescription>Instant free transfer between your own OrcaBank accounts.</CardDescription>
+              <CardDescription>Instant free transfer between your own MercurialVest accounts.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={internalForm.handleSubmit(onInternalSubmit)} className="space-y-6">
