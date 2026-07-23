@@ -13,7 +13,8 @@ import {
   UsersRound,
   History,
   FileText,
-  PauseCircle
+  PauseCircle,
+  MailIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getUser } from '@/lib/auth';
@@ -34,6 +35,7 @@ const ADMIN_ITEMS = [
   { href: '/admin/transactions', label: 'All Transactions', icon: History },
   { href: '/admin/held-payments', label: 'Held Payments', icon: PauseCircle },
   { href: '/admin/audit-logs', label: 'Audit Logs', icon: FileText },
+  { href: '/admin/email', label: 'Send Email', icon: MailIcon },
 ];
 
 const SETTINGS_ITEMS = [

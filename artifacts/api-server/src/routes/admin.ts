@@ -398,6 +398,77 @@ router.get("/held-transactions", async (_req: AuthRequest, res: Response) => {
   }
 });
 
+// POST /api/admin/send-email — send a custom email to one, many, or all users
+router.post("/send-email", async (req: AuthRequest, res: Response) => {
+  try {
+    const { to, subject, message } = req.body as { to: "all" | number[]; subject: string; message: string };
+    if (!subject?.trim() || !message?.trim()) {
+      res.status(400).json({ success: false, message: "Subject and message are required" });
+      return;
+    }
+
+    // Resolve recipient list
+    let recipients: { email: string; firstName: string }[] = [];
+    if (to === "all") {
+      recipients = await db
+        .select({ email: usersTable.email, firstName: usersTable.firstName })
+        .from(usersTable)
+        .where(eq(usersTable.isActive, true));
+    } else if (Array.isArray(to) && to.length > 0) {
+      recipients = await db
+        .select({ email: usersTable.email, firstName: usersTable.firstName })
+        .from(usersTable)
+        .where(sql`${usersTable.id} = ANY(${to})`);
+    } else {
+      res.status(400).json({ success: false, message: "Provide 'to': 'all' or an array of user IDs" });
+      return;
+    }
+
+    if (recipients.length === 0) {
+      res.status(404).json({ success: false, message: "No recipients found" });
+      return;
+    }
+
+    const { Resend } = await import("resend");
+    const key = process.env["RESEND_API_KEY"];
+    if (!key) { res.status(500).json({ success: false, message: "Email service not configured" }); return; }
+    const resend = new Resend(key);
+    const FROM_EMAIL = process.env["FROM_EMAIL"] || "MercurialVest <noreply@mecurialvest.online>";
+
+    // Send in batches of 50 to avoid rate limits
+    const htmlBody = `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;">
+        <h2 style="color:#1a56db;">MercurialVest</h2>
+        <div style="white-space:pre-wrap;color:#374151;line-height:1.6;">${message.replace(/\n/g, "<br/>")}</div>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
+        <p style="color:#9ca3af;font-size:12px;">MercurialVest &mdash; Secure Digital Banking</p>
+      </div>
+    `;
+
+    let sent = 0;
+    const errors: string[] = [];
+    for (const r of recipients) {
+      try {
+        await resend.emails.send({ from: FROM_EMAIL, to: r.email, subject, html: htmlBody });
+        sent++;
+      } catch (e: any) {
+        errors.push(r.email);
+      }
+    }
+
+    await db.insert(auditLogsTable).values({
+      adminId: req.user!.id, action: "SEND_EMAIL", entity: "users",
+      entityId: to === "all" ? "all" : to.join(","),
+      newValues: JSON.stringify({ subject, recipientCount: sent }),
+      ipAddress: req.ip || null,
+    });
+
+    res.json(success({ sent, failed: errors.length, errors }, `Email sent to ${sent} recipient${sent !== 1 ? "s" : ""}`));
+  } catch {
+    res.status(500).json({ success: false, message: "Failed to send email" });
+  }
+});
+
 // GET /api/admin/audit-logs
 router.get("/audit-logs", async (_req: AuthRequest, res: Response) => {
   try {

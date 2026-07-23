@@ -32,6 +32,7 @@ import AdminUsers from '@/pages/admin/AdminUsers';
 import AdminTransactions from '@/pages/admin/AdminTransactions';
 import AdminHeldPayments from '@/pages/admin/AdminHeldPayments';
 import AdminAuditLogs from '@/pages/admin/AdminAuditLogs';
+import AdminEmail from '@/pages/admin/AdminEmail';
 
 // Fallback
 import NotFound from '@/pages/not-found';
@@ -100,6 +101,9 @@ function Router() {
       </Route>
       <Route path="/admin/audit-logs">
         <ProtectedRoute adminOnly><ProtectedLayout><AdminAuditLogs /></ProtectedLayout></ProtectedRoute>
+      </Route>
+      <Route path="/admin/email">
+        <ProtectedRoute adminOnly><ProtectedLayout><AdminEmail /></ProtectedLayout></ProtectedRoute>
       </Route>
 
       <Route component={NotFound} />
