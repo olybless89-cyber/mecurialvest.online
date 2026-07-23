@@ -125,10 +125,16 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     entryPoints: [path.resolve(artifactDir, "src/index.ts")],
   });
 
-  // 2. Vercel serverless entry: src/app.ts → dist/app.mjs (exports Express app, no listen())
+  // 2. Vercel serverless entry: src/app-vercel.ts → dist/app.mjs
+  // Uses a transport-free pino logger — worker_threads are not available in Vercel serverless.
   await esbuild({
     ...sharedOptions,
-    entryPoints: [path.resolve(artifactDir, "src/app.ts")],
+    entryPoints: [path.resolve(artifactDir, "src/app-vercel.ts")],
+    outdir: distDir,
+    // Override output filename so it lands as dist/app.mjs (not dist/app-vercel.mjs)
+    entryNames: "[dir]/app",
+    // No pino worker plugin — the logger-vercel.ts logger has no transports
+    plugins: [],
   });
 }
 
