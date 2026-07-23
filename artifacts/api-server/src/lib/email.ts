@@ -19,7 +19,7 @@ export async function sendVerificationEmail(to: string, name: string, token: str
   await resend.emails.send({
     from: FROM_EMAIL,
     to,
-    subject: "Verify your NexBank email address",
+    subject: "Verify your MercurialVest email address",
     html: `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;">
         <h2 style="color:#1a56db;">Welcome to MercurialVest, ${name}!</h2>
@@ -42,7 +42,7 @@ export async function sendPasswordResetEmail(to: string, name: string, token: st
   await resend.emails.send({
     from: FROM_EMAIL,
     to,
-    subject: "Reset your NexBank password",
+    subject: "Reset your MercurialVest password",
     html: `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;">
         <h2 style="color:#1a56db;">Password Reset Request</h2>
@@ -74,7 +74,7 @@ export async function sendTransactionNotificationEmail(
   await resend.emails.send({
     from: FROM_EMAIL,
     to,
-    subject: `NexBank: ${isDebit ? "Debit" : "Credit"} of $${amount}`,
+    subject: `MercurialVest: ${isDebit ? "Debit" : "Credit"} of $${amount}`,
     html: `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;">
         <h2 style="color:#1a56db;">Transaction Alert</h2>
@@ -99,7 +99,7 @@ export async function sendWelcomeEmail(to: string, name: string, accountNumber: 
   await resend.emails.send({
     from: FROM_EMAIL,
     to,
-    subject: "Your NexBank account is ready!",
+    subject: "Your MercurialVest account is ready!",
     html: `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;">
         <h2 style="color:#1a56db;">Your account is ready, ${name}!</h2>
