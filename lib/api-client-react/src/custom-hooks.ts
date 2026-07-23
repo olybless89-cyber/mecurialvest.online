@@ -2,7 +2,7 @@
  * Custom hooks for features not covered by orval-generated code.
  * Follows the same pattern as the generated api.ts.
  */
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { UseMutationOptions, UseQueryOptions } from '@tanstack/react-query';
 import { customFetch } from './custom-fetch';
 
