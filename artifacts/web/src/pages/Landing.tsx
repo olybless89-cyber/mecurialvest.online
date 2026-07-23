@@ -88,7 +88,7 @@ export default function Landing() {
       <footer className="bg-background border-t py-12">
         <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-xs">OB</div>
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-xs">MV</div>
             <span className="font-semibold">MercurialVest</span>
           </div>
           <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} MercurialVest Inc. All rights reserved.</p>
