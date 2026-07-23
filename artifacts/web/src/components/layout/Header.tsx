@@ -42,10 +42,10 @@ export function Header() {
       </Sheet>
 
       <div className="flex-1 flex items-center justify-between">
-        <h1 className="text-lg font-semibold tracking-tight hidden sm:block">
-          Welcome back, {user?.firstName || 'User'}
-        </h1>
-        <div className="block sm:hidden flex-1" />
+        <div className="flex flex-col leading-tight">
+          <span className="text-xs text-muted-foreground font-normal">Welcome,</span>
+          <span className="text-base font-semibold tracking-tight">{user?.firstName || 'User'}</span>
+        </div>
 
         <div className="flex items-center gap-4">
           <Link href="/notifications">
