@@ -14,8 +14,8 @@ async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
   await rm(distDir, { recursive: true, force: true });
 
-  await esbuild({
-    entryPoints: [path.resolve(artifactDir, "src/index.ts")],
+  // Shared esbuild options
+  const sharedOptions = {
     platform: "node",
     bundle: true,
     format: "esm",
@@ -117,6 +117,18 @@ globalThis.__filename = __bannerUrl.fileURLToPath(import.meta.url);
 globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
+  };
+
+  // 1. Server entry (for Render / self-hosted): src/index.ts → dist/index.mjs
+  await esbuild({
+    ...sharedOptions,
+    entryPoints: [path.resolve(artifactDir, "src/index.ts")],
+  });
+
+  // 2. Vercel serverless entry: src/app.ts → dist/app.mjs (exports Express app, no listen())
+  await esbuild({
+    ...sharedOptions,
+    entryPoints: [path.resolve(artifactDir, "src/app.ts")],
   });
 }
 

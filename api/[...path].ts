@@ -2,10 +2,11 @@
  * Vercel serverless entry point — wraps the Express app so all /api/* requests
  * are handled by the same Express router that runs on Render in dev.
  *
- * Vercel routes every request matching /api/** here automatically because of the
- * [..path] catch-all filename convention.  The original URL is forwarded intact,
- * so Express sees e.g. GET /api/auth/login and matches routes normally.
+ * The api-server is pre-compiled by esbuild (pnpm --filter @workspace/api-server run build)
+ * into dist/app.mjs which contains all workspace dependencies bundled in, so
+ * Vercel's function bundler only needs to handle this single compiled file.
  */
-import app from '../artifacts/api-server/src/app';
+// @ts-ignore — compiled by esbuild as part of buildCommand, not tracked by tsc
+import app from '../artifacts/api-server/dist/app.mjs';
 
 export default app;
