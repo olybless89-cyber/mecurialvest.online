@@ -6,6 +6,6 @@ import App from './App';
 import './index.css';
 
 setBaseUrl(import.meta.env.VITE_API_URL || '');
-setAuthTokenGetter(() => localStorage.getItem('mercurialvest_access_token'));
+setAuthTokenGetter(() => localStorage.getItem('orcabank_access_token'));
 
 createRoot(document.getElementById('root')!).render(<App />);
