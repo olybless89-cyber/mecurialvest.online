@@ -9,7 +9,7 @@ function getResend(): Resend | null {
   return new Resend(key);
 }
 
-const FROM_EMAIL = process.env["FROM_EMAIL"] || "OrcaBank <noreply@orcabank.online>";
+const FROM_EMAIL = process.env["FROM_EMAIL"] || "MercurialVest <noreply@mecurialvest.online>";
 const APP_URL = process.env["FRONTEND_URL"] || "http://localhost:3000";
 
 export async function sendVerificationEmail(to: string, name: string, token: string) {
@@ -19,17 +19,17 @@ export async function sendVerificationEmail(to: string, name: string, token: str
   await resend.emails.send({
     from: FROM_EMAIL,
     to,
-    subject: "Verify your OrcaBank email address",
+    subject: "Verify your MercurialVest email address",
     html: `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;">
-        <h2 style="color:#1a56db;">Welcome to OrcaBank, ${name}!</h2>
+        <h2 style="color:#1a56db;">Welcome to MercurialVest, ${name}!</h2>
         <p>Please verify your email address to activate your account.</p>
         <a href="${url}" style="display:inline-block;background:#1a56db;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;margin:16px 0;">
           Verify Email
         </a>
         <p style="color:#6b7280;font-size:14px;">This link expires in 24 hours. If you did not create an account, you can safely ignore this email.</p>
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
-        <p style="color:#9ca3af;font-size:12px;">OrcaBank &mdash; Secure Digital Banking</p>
+        <p style="color:#9ca3af;font-size:12px;">MercurialVest &mdash; Secure Digital Banking</p>
       </div>
     `,
   });
@@ -42,7 +42,7 @@ export async function sendPasswordResetEmail(to: string, name: string, token: st
   await resend.emails.send({
     from: FROM_EMAIL,
     to,
-    subject: "Reset your OrcaBank password",
+    subject: "Reset your MercurialVest password",
     html: `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;">
         <h2 style="color:#1a56db;">Password Reset Request</h2>
@@ -52,7 +52,7 @@ export async function sendPasswordResetEmail(to: string, name: string, token: st
         </a>
         <p style="color:#6b7280;font-size:14px;">This link expires in 1 hour. If you did not request this, please ignore this email.</p>
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
-        <p style="color:#9ca3af;font-size:12px;">OrcaBank &mdash; Secure Digital Banking</p>
+        <p style="color:#9ca3af;font-size:12px;">MercurialVest &mdash; Secure Digital Banking</p>
       </div>
     `,
   });
@@ -74,7 +74,7 @@ export async function sendTransactionNotificationEmail(
   await resend.emails.send({
     from: FROM_EMAIL,
     to,
-    subject: `OrcaBank: ${isDebit ? "Debit" : "Credit"} of $${amount}`,
+    subject: `MercurialVest: ${isDebit ? "Debit" : "Credit"} of $${amount}`,
     html: `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;">
         <h2 style="color:#1a56db;">Transaction Alert</h2>
@@ -87,7 +87,7 @@ export async function sendTransactionNotificationEmail(
         </div>
         <p style="color:#6b7280;font-size:14px;">If you did not make this transaction, please contact support immediately.</p>
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
-        <p style="color:#9ca3af;font-size:12px;">OrcaBank &mdash; Secure Digital Banking</p>
+        <p style="color:#9ca3af;font-size:12px;">MercurialVest &mdash; Secure Digital Banking</p>
       </div>
     `,
   });
@@ -99,11 +99,11 @@ export async function sendWelcomeEmail(to: string, name: string, accountNumber: 
   await resend.emails.send({
     from: FROM_EMAIL,
     to,
-    subject: "Your OrcaBank account is ready!",
+    subject: "Your MercurialVest account is ready!",
     html: `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;">
         <h2 style="color:#1a56db;">Your account is ready, ${name}!</h2>
-        <p>Welcome to OrcaBank. Your account has been created successfully.</p>
+        <p>Welcome to MercurialVest. Your account has been created successfully.</p>
         <div style="background:#f9fafb;border-radius:8px;padding:24px;margin:16px 0;">
           <p style="margin:0;color:#374151;"><strong>Account Number:</strong> ${accountNumber}</p>
         </div>
@@ -111,7 +111,7 @@ export async function sendWelcomeEmail(to: string, name: string, accountNumber: 
           Go to Dashboard
         </a>
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
-        <p style="color:#9ca3af;font-size:12px;">OrcaBank &mdash; Secure Digital Banking</p>
+        <p style="color:#9ca3af;font-size:12px;">MercurialVest &mdash; Secure Digital Banking</p>
       </div>
     `,
   });
