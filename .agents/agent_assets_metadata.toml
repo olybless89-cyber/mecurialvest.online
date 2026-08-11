@@ -1,8 +1,0 @@
-uploads = []
-generated = []
-
-[[outputs]]
-id = "r-YHF0nC2YvPM2BSs82d2"
-uri = "file://nexbank-src.zip"
-type = "unspecified"
-title = "NexBank Source Code"
