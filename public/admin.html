@@ -8,7 +8,7 @@
   <link rel="icon" type="image/svg+xml" href="storage/app/public/photos/favicon.svg">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -189,7 +189,7 @@
 <script>
 const SUPA_URL = "https://uatnxwvkpuvxvgngxxez.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhdG54d3ZrcHV2eHZnbmd4eGV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1NjM1OTAsImV4cCI6MjEwMjEzOTU5MH0.l0X90PCIpX4OZoU1yTEpuh3Ro7ZqkP79KCFiH3RQ_lI";
-const supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
 const fmt = (n) => "$" + parseFloat(n || 0).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const loading = document.getElementById("loading");
@@ -221,14 +221,14 @@ document.querySelectorAll(".close-modal").forEach(btn => {
 });
 
 async function init() {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await sb.auth.getSession();
   if (!session) {
     window.location.href = "login";
     return;
   }
   currentUserId = session.user.id;
 
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", currentUserId).single();
+  const { data: profile } = await sb.from("profiles").select("role").eq("id", currentUserId).single();
   if (!profile || profile.role !== "admin") {
     loading.classList.add("hidden");
     accessDenied.classList.remove("hidden");
@@ -242,7 +242,7 @@ async function init() {
 
 async function loadUsers() {
   usersBody.innerHTML = "";
-  const { data: users, error } = await supabase.rpc("get_all_profiles");
+  const { data: users, error } = await sb.rpc("get_all_profiles");
   if (error) {
     usersBody.innerHTML = '<tr><td colspan="7" class="px-6 py-4 text-red-600">Failed to load users: ' + error.message + "</td></tr>";
     return;
@@ -290,7 +290,7 @@ function bindActions() {
   document.querySelectorAll(".toggle-status").forEach(btn => {
     btn.addEventListener("click", async () => {
       const newStatus = btn.dataset.status === "active" ? "inactive" : "active";
-      const { error } = await supabase.rpc("update_user_status", { target_id: btn.dataset.id, new_status: newStatus });
+      const { error } = await sb.rpc("update_user_status", { target_id: btn.dataset.id, new_status: newStatus });
       if (error) alert("Failed: " + error.message);
       else await loadUsers();
     });
@@ -323,7 +323,7 @@ function bindActions() {
       const select = document.getElementById("release-hold-id");
       select.innerHTML = '<option value="">Loading...</option>';
       showModal("release-modal");
-      const { data, error } = await supabase.from("transactions").select("id,amount,reason,created_at")
+      const { data, error } = await sb.from("transactions").select("id,amount,reason,created_at")
         .eq("user_id", userId).eq("type", "hold").eq("status", "active").order("created_at", { ascending: false });
       if (error) { select.innerHTML = '<option value="">Error loading holds</option>'; return; }
       if (!data || data.length === 0) { select.innerHTML = '<option value="">No active holds</option>'; return; }
@@ -338,7 +338,7 @@ function bindActions() {
       const empty = document.getElementById("txns-modal-empty");
       tbody.innerHTML = "";
       showModal("txns-modal");
-      const { data, error } = await supabase.rpc("admin_user_transactions", { target_id: userId });
+      const { data, error } = await sb.rpc("admin_user_transactions", { target_id: userId });
       if (error) { tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-red-600">Error: ' + error.message + "</td></tr>"; return; }
       if (!data || data.length === 0) { empty.classList.remove("hidden"); return; }
       empty.classList.add("hidden");
@@ -364,7 +364,7 @@ document.getElementById("fund-form").addEventListener("submit", async (e) => {
   const amount = parseFloat(document.getElementById("fund-amount").value);
   const reason = document.getElementById("fund-reason").value.trim();
   if (!amount || amount <= 0) { alert("Enter a positive amount"); return; }
-  const { error } = await supabase.rpc("admin_credit_user", { target_id: userId, amount: amount, reason: reason });
+  const { error } = await sb.rpc("admin_credit_user", { target_id: userId, amount: amount, reason: reason });
   if (error) alert("Failed to fund: " + error.message);
   else { hideModal("fund-modal"); await loadUsers(); }
 });
@@ -375,7 +375,7 @@ document.getElementById("hold-form").addEventListener("submit", async (e) => {
   const amount = parseFloat(document.getElementById("hold-amount").value);
   const reason = document.getElementById("hold-reason").value.trim();
   if (!amount || amount <= 0) { alert("Enter a positive amount"); return; }
-  const { error } = await supabase.rpc("admin_hold_funds", { target_id: userId, amount: amount, reason: reason });
+  const { error } = await sb.rpc("admin_hold_funds", { target_id: userId, amount: amount, reason: reason });
   if (error) alert("Failed to hold: " + error.message);
   else { hideModal("hold-modal"); await loadUsers(); }
 });
@@ -384,18 +384,18 @@ document.getElementById("release-form").addEventListener("submit", async (e) => 
   e.preventDefault();
   const holdId = document.getElementById("release-hold-id").value;
   if (!holdId) { alert("Select a hold to release"); return; }
-  const { error } = await supabase.rpc("admin_release_hold", { hold_transaction_id: holdId });
+  const { error } = await sb.rpc("admin_release_hold", { hold_transaction_id: holdId });
   if (error) alert("Failed to release: " + error.message);
   else { hideModal("release-modal"); await loadUsers(); }
 });
 
 document.getElementById("refresh-btn").addEventListener("click", loadUsers);
 document.getElementById("logout-btn").addEventListener("click", async () => {
-  await supabase.auth.signOut();
+  await sb.auth.signOut();
   window.location.href = "login";
 });
 
-supabase.auth.onAuthStateChange((event) => {
+sb.auth.onAuthStateChange((event) => {
   if (event === "SIGNED_OUT") window.location.href = "login";
 });
 
