@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - MercurialVest</title>
+  <meta name="description" content="Admin dashboard for MercurialVest user management">
+  <link rel="icon" type="image/svg+xml" href="storage/app/public/photos/favicon.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#eff6ff', 100: '#dbeafe', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' }
+          },
+          fontFamily: { sans: ['Inter','sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <style>
+    .loader{border:3px solid #f3f4f6;border-top:3px solid #2563eb;border-radius:50%;width:28px;height:28px;animation:spin 1s linear infinite}
+    @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+    .badge-active{background:#dcfce7;color:#166534}
+    .badge-inactive{background:#fee2e2;color:#991b1b}
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+<nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between h-16 items-center">
+      <a href="/" class="flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 48" width="180" height="38">
+          <rect x="2" y="10" width="9" height="30" rx="2" fill="#2563eb"/>
+          <rect x="15" y="18" width="9" height="22" rx="2" fill="#2563eb"/>
+          <rect x="28" y="5" width="9" height="35" rx="2" fill="#0f2356"/>
+          <polygon points="28,5 32.5,0 37,5" fill="#2563eb"/>
+          <text x="46" y="32" font-family="Arial Black,Arial,sans-serif" font-size="21" font-weight="900" fill="#0f2356">MERCURIAL</text>
+          <text x="46" y="46" font-family="Arial,sans-serif" font-size="10" font-weight="600" fill="#2563eb" letter-spacing="5">VEST BANK</text>
+        </svg>
+      </a>
+      <div class="flex items-center gap-4">
+        <span class="hidden sm:inline text-sm text-purple-700 bg-purple-50 px-3 py-1 rounded-full font-medium">Admin</span>
+        <a href="dashboard" class="text-sm text-gray-600 hover:text-brand-700">Dashboard</a>
+        <button id="logout-btn" class="bg-brand-700 hover:bg-brand-800 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Logout</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <div id="loading" class="flex justify-center py-20">
+    <div class="loader"></div>
+  </div>
+
+  <div id="access-denied" class="hidden text-center py-20">
+    <h1 class="text-2xl font-bold text-gray-900">Access Denied</h1>
+    <p class="text-gray-600 mt-2">You do not have permission to view this page.</p>
+    <a href="dashboard" class="inline-block mt-6 bg-brand-700 hover:bg-brand-800 text-white font-medium px-6 py-3 rounded-lg">Go to Dashboard</a>
+  </div>
+
+  <div id="admin-content" class="hidden">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">User Management</h1>
+        <p class="text-gray-600 text-sm mt-1">View and manage registered users</p>
+      </div>
+      <div class="flex gap-3">
+        <button id="refresh-btn" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg transition">Refresh</button>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">User</th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Joined</th>
+              <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
+            </tr>
+          </thead>
+          <tbody id="users-body" class="bg-white divide-y divide-gray-200">
+          </tbody>
+        </table>
+      </div>
+      <div id="empty-state" class="hidden text-center py-12 text-gray-500">No users found</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPA_URL = "https://uatnxwvkpuvxvgngxxez.supabase.co";
+const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhdG54d3ZrcHV2eHZnbmd4eGV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1NjM1OTAsImV4cCI6MjEwMjEzOTU5MH0.l0X90PCIpX4OZoU1yTEpuh3Ro7ZqkP79KCFiH3RQ_lI";
+const supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+
+const loading = document.getElementById("loading");
+const accessDenied = document.getElementById("access-denied");
+const adminContent = document.getElementById("admin-content");
+const usersBody = document.getElementById("users-body");
+const emptyState = document.getElementById("empty-state");
+
+let currentUserId = null;
+
+async function init() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    window.location.href = "login";
+    return;
+  }
+  currentUserId = session.user.id;
+
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", currentUserId).single();
+  if (!profile || profile.role !== "admin") {
+    loading.classList.add("hidden");
+    accessDenied.classList.remove("hidden");
+    return;
+  }
+
+  await loadUsers();
+  loading.classList.add("hidden");
+  adminContent.classList.remove("hidden");
+}
+
+async function loadUsers() {
+  usersBody.innerHTML = '';
+  // Use security definer function for admin full access
+  const { data: users, error } = await supabase.rpc('get_all_profiles');
+  if (error) {
+    console.error(error);
+    usersBody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-red-600">Failed to load users: ' + error.message + '</td></tr>';
+    return;
+  }
+  if (!users || users.length === 0) {
+    emptyState.classList.remove("hidden");
+    return;
+  }
+  emptyState.classList.add("hidden");
+
+  users.forEach(u => {
+    const tr = document.createElement("tr");
+    const isSelf = u.id === currentUserId;
+    const roleClass = u.role === "admin" ? "text-purple-700 bg-purple-50" : "text-gray-600 bg-gray-100";
+    const statusClass = u.status === "active" ? "badge-active" : "badge-inactive";
+    const btnText = u.status === "active" ? "Deactivate" : "Activate";
+    const btnClass = u.status === "active" ? "text-red-600 hover:text-red-800" : "text-green-600 hover:text-green-800";
+    tr.innerHTML = `
+      <td class="px-6 py-4 whitespace-nowrap">
+        <div class="text-sm font-medium text-gray-900">${u.full_name || '—'}</div>
+      </td>
+      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${u.email}</td>
+      <td class="px-6 py-4 whitespace-nowrap"><span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${roleClass}">${u.role}</span></td>
+      <td class="px-6 py-4 whitespace-nowrap"><span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">${u.status}</span></td>
+      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(u.created_at).toLocaleDateString()}</td>
+      <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+        ${isSelf ? '<span class="text-gray-400">You</span>' : `<button class="${btnClass} toggle-status" data-id="${u.id}" data-status="${u.status}">${btnText}</button>`}
+      </td>
+    `;
+    usersBody.appendChild(tr);
+  });
+
+  document.querySelectorAll(".toggle-status").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      const newStatus = btn.dataset.status === "active" ? "inactive" : "active";
+      const { error } = await supabase.rpc('update_user_status', { target_id: id, new_status: newStatus });
+      if (error) {
+        alert("Failed to update status: " + error.message);
+      } else {
+        await loadUsers();
+      }
+    });
+  });
+}
+
+document.getElementById("refresh-btn").addEventListener("click", loadUsers);
+document.getElementById("logout-btn").addEventListener("click", async () => {
+  await supabase.auth.signOut();
+  window.location.href = "login";
+});
+
+supabase.auth.onAuthStateChange((event) => {
+  if (event === "SIGNED_OUT") window.location.href = "login";
+});
+
+init();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - MercurialVest</title>
+  <meta name="description" content="Your MercurialVest digital banking dashboard">
+  <link rel="icon" type="image/svg+xml" href="storage/app/public/photos/favicon.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#eff6ff', 100: '#dbeafe', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' }
+          },
+          fontFamily: { sans: ['Inter','sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <style>
+    .loader{border:3px solid #f3f4f6;border-top:3px solid #2563eb;border-radius:50%;width:28px;height:28px;animation:spin 1s linear infinite}
+    @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+    .nav-link{color:#64748b;transition:.15s}.nav-link:hover{color:#2563eb}
+    .card{transition:transform .2s,box-shadow .2s}
+    .card:hover{transform:translateY(-2px);box-shadow:0 10px 25px -5px rgba(0,0,0,.1)}
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+<!-- Top nav -->
+<nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between h-16 items-center">
+      <a href="/" class="flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 48" width="180" height="38">
+          <rect x="2" y="10" width="9" height="30" rx="2" fill="#2563eb"/>
+          <rect x="15" y="18" width="9" height="22" rx="2" fill="#2563eb"/>
+          <rect x="28" y="5" width="9" height="35" rx="2" fill="#0f2356"/>
+          <polygon points="28,5 32.5,0 37,5" fill="#2563eb"/>
+          <text x="46" y="32" font-family="Arial Black,Arial,sans-serif" font-size="21" font-weight="900" fill="#0f2356">MERCURIAL</text>
+          <text x="46" y="46" font-family="Arial,sans-serif" font-size="10" font-weight="600" fill="#2563eb" letter-spacing="5">VEST BANK</text>
+        </svg>
+      </a>
+      <div class="flex items-center gap-4">
+        <span id="user-email" class="text-sm text-gray-600 hidden sm:inline"></span>
+        <button id="logout-btn" class="bg-brand-700 hover:bg-brand-800 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Logout</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- Loading -->
+  <div id="loading" class="flex justify-center py-20">
+    <div class="loader"></div>
+  </div>
+
+  <!-- Auth guard message -->
+  <div id="auth-guard" class="hidden text-center py-20">
+    <h1 class="text-2xl font-bold text-gray-900">Please sign in</h1>
+    <p class="text-gray-600 mt-2">You need to be logged in to view your dashboard.</p>
+    <a href="login" class="inline-block mt-6 bg-brand-700 hover:bg-brand-800 text-white font-medium px-6 py-3 rounded-lg">Go to Login</a>
+  </div>
+
+  <!-- Dashboard content -->
+  <div id="dashboard-content" class="hidden">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-900" id="welcome-text">Welcome</h1>
+      <p class="text-gray-600 text-sm mt-1">Manage your MercurialVest account and explore banking services.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div class="card bg-white rounded-xl border border-gray-100 p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-medium text-gray-500">Account Status</h3>
+          <span class="h-2 w-2 rounded-full bg-green-500"></span>
+        </div>
+        <p class="text-2xl font-bold text-gray-900" id="status-text">Active</p>
+        <p class="text-sm text-gray-500 mt-1">Member since <span id="member-since">-</span></p>
+      </div>
+
+      <div class="card bg-white rounded-xl border border-gray-100 p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-medium text-gray-500">Account Type</h3>
+          <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+        </div>
+        <p class="text-2xl font-bold text-gray-900">Personal</p>
+        <p class="text-sm text-gray-500 mt-1">Digital banking account</p>
+      </div>
+
+      <div class="card bg-gradient-to-br from-brand-700 to-brand-900 rounded-xl p-6 text-white">
+        <h3 class="text-sm font-medium text-blue-100 mb-2">Quick Access</h3>
+        <p class="text-lg font-semibold">Online Banking</p>
+        <p class="text-sm text-blue-100 mt-1">24/7 secure access</p>
+        <a href="personal" class="inline-block mt-4 text-sm bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition">View Services</a>
+      </div>
+    </div>
+
+    <h2 class="text-lg font-bold text-gray-900 mb-4">Banking Services</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <a href="business" class="card bg-white rounded-xl border border-gray-100 p-5 hover:border-brand-300">
+        <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-3">
+          <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5"></path></svg>
+        </div>
+        <h3 class="font-semibold text-gray-900">Business</h3>
+        <p class="text-sm text-gray-500 mt-1">Solutions for companies</p>
+      </a>
+      <a href="personal" class="card bg-white rounded-xl border border-gray-100 p-5 hover:border-brand-300">
+        <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-3">
+          <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+        </div>
+        <h3 class="font-semibold text-gray-900">Personal</h3>
+        <p class="text-sm text-gray-500 mt-1">Accounts for individuals</p>
+      </a>
+      <a href="cards" class="card bg-white rounded-xl border border-gray-100 p-5 hover:border-brand-300">
+        <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-3">
+          <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+        </div>
+        <h3 class="font-semibold text-gray-900">Credit Cards</h3>
+        <p class="text-sm text-gray-500 mt-1">Cards and rewards</p>
+      </a>
+      <a href="loans" class="card bg-white rounded-xl border border-gray-100 p-5 hover:border-brand-300">
+        <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-3">
+          <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
+        <h3 class="font-semibold text-gray-900">Loans</h3>
+        <p class="text-sm text-gray-500 mt-1">Apply for financing</p>
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPA_URL = "https://uatnxwvkpuvxvgngxxez.supabase.co";
+const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhdG54d3ZrcHV2eHZnbmd4eGV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1NjM1OTAsImV4cCI6MjEwMjEzOTU5MH0.l0X90PCIpX4OZoU1yTEpuh3Ro7ZqkP79KCFiH3RQ_lI";
+const supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+
+const loading = document.getElementById("loading");
+const authGuard = document.getElementById("auth-guard");
+const dashboardContent = document.getElementById("dashboard-content");
+const welcomeText = document.getElementById("welcome-text");
+const userEmail = document.getElementById("user-email");
+const statusText = document.getElementById("status-text");
+const memberSince = document.getElementById("member-since");
+
+async function init() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    loading.classList.add("hidden");
+    authGuard.classList.remove("hidden");
+    return;
+  }
+
+  const user = session.user;
+  userEmail.textContent = user.email;
+  welcomeText.textContent = "Welcome, " + (user.user_metadata?.full_name || user.email.split("@")[0]);
+
+  const { data: profile } = await supabase.from("profiles").select("status,created_at,role").eq("id", user.id).single();
+  if (profile) {
+    statusText.textContent = profile.status?.charAt(0).toUpperCase() + profile.status?.slice(1);
+    memberSince.textContent = new Date(profile.created_at).toLocaleDateString();
+    if (profile.role === "admin") {
+      // Add admin quick link
+      const adminCard = document.createElement("a");
+      adminCard.href = "admin";
+      adminCard.className = "card bg-white rounded-xl border border-gray-100 p-5 hover:border-brand-300";
+      adminCard.innerHTML = '<div class="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center mb-3"><svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg></div><h3 class="font-semibold text-gray-900">Admin Panel</h3><p class="text-sm text-gray-500 mt-1">Manage users</p>';
+      document.querySelector(".grid-cols-1.sm\:grid-cols-2.lg\:grid-cols-4").appendChild(adminCard);
+    }
+  }
+
+  loading.classList.add("hidden");
+  dashboardContent.classList.remove("hidden");
+}
+
+init();
+
+document.getElementById("logout-btn").addEventListener("click", async () => {
+  await supabase.auth.signOut();
+  window.location.href = "login";
+});
+
+// Realtime auth listener
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === "SIGNED_OUT") window.location.href = "login";
+});
+</script>
+
+</body>
+</html>
