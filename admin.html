@@ -3,185 +3,603 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Panel - MercurialVest</title>
-  <meta name="description" content="Admin dashboard for MercurialVest user management">
+  <title>Admin Dashboard — MercurialVest</title>
   <link rel="icon" type="image/svg+xml" href="storage/app/public/photos/favicon.svg">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brand: { 50: '#eff6ff', 100: '#dbeafe', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' }
-          },
-          fontFamily: { sans: ['Inter','sans-serif'] }
-        }
-      }
-    }
-  </script>
   <style>
-    .loader{border:3px solid #f3f4f6;border-top:3px solid #2563eb;border-radius:50%;width:28px;height:28px;animation:spin 1s linear infinite}
-    @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
-    .badge-active{background:#dcfce7;color:#166534}
-    .badge-inactive{background:#fee2e2;color:#991b1b}
-    .modal-bg{background:rgba(0,0,0,.5)}
-    .card{transition:transform .2s,box-shadow .2s}
-    .card:hover{transform:translateY(-1px)}
-    .hidden{display:none !important}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#0b1120;color:#e2e8f0;min-height:100vh;display:flex;flex-direction:column}
+
+/* ── Layout ── */
+.app{display:flex;min-height:100vh}
+.sidebar{width:260px;background:#0d1526;border-right:1px solid #1e2d4a;display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:200;transition:transform .25s}
+.sidebar.hidden-mob{transform:translateX(-100%)}
+.main{flex:1;margin-left:260px;display:flex;flex-direction:column;min-height:100vh}
+@media(max-width:768px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.main{margin-left:0}}
+
+/* ── Sidebar ── */
+.sidebar-logo{padding:22px 20px 18px;border-bottom:1px solid #1e2d4a}
+.sidebar-logo svg text{fill:#fff}
+.sidebar-badge{display:inline-block;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:10px;font-weight:700;letter-spacing:1px;padding:3px 8px;border-radius:20px;margin-top:6px}
+.sidebar-nav{flex:1;overflow-y:auto;padding:16px 0}
+.nav-section{padding:8px 20px 4px;font-size:10px;font-weight:700;letter-spacing:1.5px;color:#4a5568;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px 20px;cursor:pointer;color:#94a3b8;font-size:14px;font-weight:500;border-left:3px solid transparent;transition:.15s;text-decoration:none}
+.nav-item:hover{background:#1a2640;color:#e2e8f0;border-left-color:#2563eb}
+.nav-item.active{background:#1a2640;color:#60a5fa;border-left-color:#2563eb}
+.nav-item .icon{width:18px;height:18px;opacity:.7;flex-shrink:0}
+.nav-item.active .icon{opacity:1}
+.nav-badge{margin-left:auto;background:#ef4444;color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.sidebar-footer{padding:16px 20px;border-top:1px solid #1e2d4a}
+.sidebar-user{display:flex;align-items:center;gap:10px;font-size:13px;color:#94a3b8}
+.avatar{width:32px;height:32px;background:linear-gradient(135deg,#2563eb,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;flex-shrink:0}
+
+/* ── Top bar ── */
+.topbar{background:#0d1526;border-bottom:1px solid #1e2d4a;padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar-title{font-size:17px;font-weight:700;color:#e2e8f0}
+.topbar-right{display:flex;align-items:center;gap:14px}
+.btn-icon{background:transparent;border:1px solid #1e2d4a;color:#94a3b8;width:38px;height:38px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.btn-icon:hover{background:#1a2640;color:#e2e8f0}
+.hamburger{display:none}
+@media(max-width:768px){.hamburger{display:flex}}
+.logout-btn{background:#1e2d4a;color:#94a3b8;border:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
+.logout-btn:hover{background:#2563eb;color:#fff}
+
+/* ── Content ── */
+.content{flex:1;padding:28px 28px;overflow-y:auto}
+@media(max-width:768px){.content{padding:16px}}
+.section{display:none}.section.active{display:block}
+.section-title{font-size:20px;font-weight:700;color:#f1f5f9;margin-bottom:6px}
+.section-sub{font-size:13px;color:#64748b;margin-bottom:24px}
+
+/* ── Stats grid ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin-bottom:28px}
+.stat-card{background:#0d1526;border:1px solid #1e2d4a;border-radius:12px;padding:20px;position:relative;overflow:hidden;transition:.2s}
+.stat-card:hover{border-color:#2563eb;transform:translateY(-2px)}
+.stat-card::before{content:'';position:absolute;top:0;right:0;width:60px;height:60px;border-radius:0 12px 0 60px;opacity:.08}
+.stat-card.blue::before{background:#2563eb}
+.stat-card.purple::before{background:#7c3aed}
+.stat-card.green::before{background:#10b981}
+.stat-card.orange::before{background:#f59e0b}
+.stat-card.red::before{background:#ef4444}
+.stat-label{font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:#64748b;margin-bottom:8px}
+.stat-value{font-size:26px;font-weight:800;color:#f1f5f9;line-height:1}
+.stat-sub{font-size:11px;color:#4a5568;margin-top:6px}
+.stat-icon{position:absolute;top:16px;right:16px;opacity:.15;font-size:28px}
+
+/* ── Tables ── */
+.table-wrap{background:#0d1526;border:1px solid #1e2d4a;border-radius:12px;overflow:hidden}
+.table-header{padding:16px 20px;border-bottom:1px solid #1e2d4a;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.table-header h3{font-size:15px;font-weight:700;color:#f1f5f9}
+.search-box{background:#0b1120;border:1px solid #1e2d4a;border-radius:8px;padding:8px 14px;font-size:13px;color:#e2e8f0;width:220px;outline:none;transition:.15s}
+.search-box:focus{border-color:#2563eb}
+.search-box::placeholder{color:#4a5568}
+.tbl{width:100%;border-collapse:collapse;min-width:600px}
+.tbl th{padding:12px 16px;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#4a5568;border-bottom:1px solid #1e2d4a;text-align:left;white-space:nowrap}
+.tbl td{padding:13px 16px;font-size:13px;color:#94a3b8;border-bottom:1px solid #0f1929;white-space:nowrap}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr.clickable:hover{background:#1a2640;cursor:pointer}
+.tbl tr.clickable td{color:#cbd5e1}
+.overflow-x{overflow-x:auto}
+
+/* ── Badges ── */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-active,.badge-approved,.badge-verified{background:#052e16;color:#4ade80}
+.badge-inactive,.badge-rejected{background:#2d0000;color:#f87171}
+.badge-pending{background:#1c1100;color:#fbbf24}
+.badge-admin{background:#1e1040;color:#a78bfa}
+.badge-user{background:#0a1f3a;color:#60a5fa}
+.badge-open{background:#0a1f3a;color:#60a5fa}
+.badge-in_progress{background:#1c1100;color:#fbbf24}
+.badge-resolved,.badge-closed{background:#052e16;color:#4ade80}
+.badge-cancelled{background:#1e1e1e;color:#94a3b8}
+.badge-unverified{background:#1e1e1e;color:#94a3b8}
+.badge-credit{background:#052e16;color:#4ade80}
+.badge-hold{background:#1c1100;color:#fbbf24}
+.badge-release,.badge-transfer{background:#0a1f3a;color:#60a5fa}
+
+/* ── Buttons ── */
+.btn{padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:#2563eb;color:#fff}.btn-primary:hover{background:#1d4ed8}
+.btn-success{background:#059669;color:#fff}.btn-success:hover{background:#047857}
+.btn-danger{background:#dc2626;color:#fff}.btn-danger:hover{background:#b91c1c}
+.btn-warning{background:#d97706;color:#fff}.btn-warning:hover{background:#b45309}
+.btn-ghost{background:#1e2d4a;color:#94a3b8}.btn-ghost:hover{background:#2d3f5e;color:#e2e8f0}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:#0d1526;border:1px solid #1e2d4a;border-radius:16px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 25px 60px rgba(0,0,0,.5)}
+.modal-header{padding:20px 24px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.modal-title{font-size:18px;font-weight:700;color:#f1f5f9}
+.modal-close{background:transparent;border:none;color:#64748b;cursor:pointer;font-size:22px;line-height:1;padding:0;flex-shrink:0;margin-top:2px}
+.modal-close:hover{color:#f87171}
+.modal-body{padding:20px 24px 24px}
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:12px;font-weight:700;letter-spacing:.5px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase}
+.form-input,.form-select,.form-textarea{width:100%;background:#0b1120;border:1.5px solid #1e2d4a;border-radius:8px;padding:11px 14px;font-size:14px;color:#e2e8f0;outline:none;transition:.15s;font-family:inherit}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:#2563eb}
+.form-textarea{resize:vertical;min-height:80px}
+.form-select option{background:#0d1526}
+.modal-footer{padding:0 24px 20px;display:flex;gap:10px;justify-content:flex-end}
+
+/* ── User profile panel ── */
+.user-profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+@media(max-width:480px){.user-profile-grid{grid-template-columns:1fr}}
+.info-item .label{font-size:11px;font-weight:700;letter-spacing:.5px;color:#4a5568;text-transform:uppercase;margin-bottom:3px}
+.info-item .value{font-size:14px;color:#cbd5e1;font-weight:500}
+.balance-display{background:#0b1120;border:1px solid #1e2d4a;border-radius:10px;padding:16px;margin-bottom:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:center}
+.balance-display .amt{font-size:22px;font-weight:800;color:#4ade80}
+.balance-display .amt.held{color:#fbbf24}
+.balance-display .lbl{font-size:11px;color:#4a5568;margin-top:2px}
+.action-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+
+/* ── Alert ── */
+.alert{padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none}
+.alert-err{background:#2d0000;color:#f87171;border:1px solid #7f1d1d}
+.alert-ok{background:#052e16;color:#4ade80;border:1px solid #14532d}
+.alert-info{background:#0a1f3a;color:#93c5fd;border:1px solid #1e3a5f}
+
+/* ── Loading ── */
+.loader-overlay{position:fixed;inset:0;background:rgba(11,17,32,.9);z-index:999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+.spinner{width:42px;height:42px;border:4px solid #1e2d4a;border-top:4px solid #2563eb;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loader-text{font-size:15px;color:#60a5fa;font-weight:600}
+
+/* ── Empty state ── */
+.empty{text-align:center;padding:48px 24px;color:#4a5568}
+.empty-icon{font-size:40px;margin-bottom:12px;opacity:.4}
+.empty-text{font-size:15px}
+
+/* ── Recent activity ── */
+.activity-list{display:flex;flex-direction:column;gap:0}
+.activity-item{display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid #0f1929}
+.activity-item:last-child{border-bottom:none}
+.activity-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-green{background:#4ade80}.dot-yellow{background:#fbbf24}.dot-blue{background:#60a5fa}.dot-red{background:#f87171}
+.activity-info{flex:1;min-width:0}
+.activity-title{font-size:13px;font-weight:600;color:#cbd5e1;truncate:true;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.activity-meta{font-size:11px;color:#4a5568;margin-top:2px}
+.activity-amount{font-size:13px;font-weight:700;flex-shrink:0}
+.amount-credit{color:#4ade80}.amount-debit{color:#f87171}
+
+/* ── Overlay toggle ── */
+.mob-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:150}
+@media(max-width:768px){.mob-backdrop.show{display:block}}
   </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body>
 
-<nav class="bg-white border-b border-gray-200 sticky top-0 z-40">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="flex justify-between h-16 items-center">
-      <a href="/" class="flex items-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 48" width="200" height="44" role="img" aria-label="MercurialVest"><path d="M8 10 L8 38 L16 38 L16 22 L22 34 L28 22 L28 38 L36 38 L36 10 L28 10 L22 24 L16 10 Z" fill="#0f2356"/><path d="M6 42 Q22 35 38 42" stroke="#2563eb" stroke-width="2.5" fill="none" stroke-linecap="round"/><text x="46" y="29" font-family="Segoe UI,Arial,sans-serif" font-size="17" font-weight="700" fill="#0f2356" letter-spacing="-0.3">MercurialVest</text><text x="47" y="42" font-family="Segoe UI,Arial,sans-serif" font-size="8" font-weight="500" fill="#2563eb" letter-spacing="2.5">BANK</text></svg>
+<!-- Loading overlay -->
+<div class="loader-overlay" id="loader">
+  <div class="spinner"></div>
+  <span class="loader-text">Loading Admin Panel...</span>
+</div>
+
+<!-- Mobile backdrop -->
+<div class="mob-backdrop" id="mob-backdrop" onclick="closeSidebar()"></div>
+
+<div class="app">
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 48" width="160" height="36">
+        <path d="M8 10 L8 38 L16 38 L16 22 L22 34 L28 22 L28 38 L36 38 L36 10 L28 10 L22 24 L16 10 Z" fill="#fff"/>
+        <path d="M6 42 Q22 35 38 42" stroke="#93c5fd" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <text x="46" y="29" font-family="Inter,sans-serif" font-size="17" font-weight="700">MercurialVest</text>
+        <text x="47" y="42" font-family="Inter,sans-serif" font-size="8" font-weight="500" fill="#93c5fd" letter-spacing="2.5">BANK</text>
+      </svg>
+      <div class="sidebar-badge">ADMIN PANEL</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">Overview</div>
+      <a class="nav-item active" onclick="showSection('dashboard')" href="#">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
       </a>
-      <div class="flex items-center gap-4">
-        <span class="hidden sm:inline text-sm text-purple-700 bg-purple-50 px-3 py-1 rounded-full font-medium">Admin</span>
-        <a href="dashboard" class="text-sm text-gray-600 hover:text-brand-700">Dashboard</a>
-        <button id="logout-btn" class="bg-brand-700 hover:bg-brand-800 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Logout</button>
+
+      <div class="nav-section">User Management</div>
+      <a class="nav-item" onclick="showSection('users')" href="#">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        All Users
+      </a>
+
+      <div class="nav-section">Approvals</div>
+      <a class="nav-item" onclick="showSection('transfers')" href="#">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        Transfers
+        <span class="nav-badge" id="nb-transfers">0</span>
+      </a>
+      <a class="nav-item" onclick="showSection('loans')" href="#">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Loans
+        <span class="nav-badge" id="nb-loans">0</span>
+      </a>
+      <a class="nav-item" onclick="showSection('tickets')" href="#">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Support Tickets
+        <span class="nav-badge" id="nb-tickets">0</span>
+      </a>
+
+      <div class="nav-section">Finance</div>
+      <a class="nav-item" onclick="showSection('transactions')" href="#">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        All Transactions
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="avatar" id="admin-avatar">A</div>
+        <div>
+          <div id="admin-name" style="font-weight:600;color:#e2e8f0;font-size:13px">Admin</div>
+          <div style="font-size:11px">Super Administrator</div>
+        </div>
       </div>
     </div>
-  </div>
-</nav>
+  </aside>
 
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- ── MAIN ── -->
+  <div class="main">
+    <!-- Topbar -->
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:14px">
+        <button class="btn-icon hamburger" onclick="toggleSidebar()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <span class="topbar-title" id="page-title">Dashboard</span>
+      </div>
+      <div class="topbar-right">
+        <button class="btn-icon" onclick="loadAll()" title="Refresh">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        </button>
+        <button class="logout-btn" onclick="doLogout()">Sign Out</button>
+      </div>
+    </header>
 
-  <div id="loading" class="flex justify-center py-20">
-    <div class="loader"></div>
-  </div>
+    <!-- Content -->
+    <div class="content">
 
-  <div id="access-denied" class="hidden text-center py-20">
-    <h1 class="text-2xl font-bold text-gray-900">Access Denied</h1>
-    <p class="text-gray-600 mt-2">You do not have permission to view this page.</p>
-    <a href="dashboard" class="inline-block mt-6 bg-brand-700 hover:bg-brand-800 text-white font-medium px-6 py-3 rounded-lg">Go to Dashboard</a>
-  </div>
+      <!-- ═══════════ DASHBOARD ═══════════ -->
+      <div class="section active" id="section-dashboard">
+        <div class="section-title">Welcome back, Admin 👋</div>
+        <div class="section-sub">Here's what's happening across MercurialVest today.</div>
 
-  <div id="admin-content" class="hidden">
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <div class="stats-grid">
+          <div class="stat-card blue">
+            <div class="stat-label">Total Users</div>
+            <div class="stat-value" id="s-total-users">—</div>
+            <div class="stat-sub" id="s-active-users">Loading...</div>
+            <div class="stat-icon">👥</div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-label">Total Balance</div>
+            <div class="stat-value" id="s-total-balance">—</div>
+            <div class="stat-sub" id="s-total-held">Loading...</div>
+            <div class="stat-icon">💰</div>
+          </div>
+          <div class="stat-card orange">
+            <div class="stat-label">Pending Transfers</div>
+            <div class="stat-value" id="s-pending-transfers">—</div>
+            <div class="stat-sub">Awaiting approval</div>
+            <div class="stat-icon">⏳</div>
+          </div>
+          <div class="stat-card purple">
+            <div class="stat-label">Pending Loans</div>
+            <div class="stat-value" id="s-pending-loans">—</div>
+            <div class="stat-sub">Awaiting review</div>
+            <div class="stat-icon">📋</div>
+          </div>
+          <div class="stat-card red">
+            <div class="stat-label">Open Tickets</div>
+            <div class="stat-value" id="s-open-tickets">—</div>
+            <div class="stat-sub">Support issues</div>
+            <div class="stat-icon">🎫</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-label">Transactions</div>
+            <div class="stat-value" id="s-total-txns">—</div>
+            <div class="stat-sub">All time</div>
+            <div class="stat-icon">📊</div>
+          </div>
+        </div>
+
+        <!-- Recent activity -->
+        <div class="table-wrap">
+          <div class="table-header">
+            <h3>Recent Transactions</h3>
+            <button class="btn btn-ghost btn-sm" onclick="showSection('transactions')">View All →</button>
+          </div>
+          <div id="recent-activity" style="padding:4px 0">
+            <div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Loading...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ USERS ═══════════ -->
+      <div class="section" id="section-users">
+        <div class="section-title">User Management</div>
+        <div class="section-sub">Click any user to manage their account, funds, and status.</div>
+        <div class="table-wrap">
+          <div class="table-header">
+            <h3>All Users <span id="user-count" style="color:#4a5568;font-weight:400;font-size:13px"></span></h3>
+            <input class="search-box" type="text" placeholder="Search by name or email..." id="user-search" oninput="filterUsers()">
+          </div>
+          <div class="overflow-x">
+            <table class="tbl">
+              <thead><tr>
+                <th>User</th><th>Account No.</th><th>Balance</th><th>Held</th>
+                <th>Status</th><th>KYC</th><th>Joined</th>
+              </tr></thead>
+              <tbody id="users-tbody">
+                <tr><td colspan="7"><div class="empty"><div class="empty-icon">👥</div><div class="empty-text">Loading users...</div></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ TRANSFERS ═══════════ -->
+      <div class="section" id="section-transfers">
+        <div class="section-title">Transfer Approvals</div>
+        <div class="section-sub">Review and approve or reject user transfer requests.</div>
+        <div class="table-wrap">
+          <div class="table-header">
+            <h3>Transfer Requests</h3>
+            <select id="transfer-filter" class="search-box" style="width:160px" onchange="loadTransfers()">
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="">All</option>
+            </select>
+          </div>
+          <div class="overflow-x">
+            <table class="tbl">
+              <thead><tr>
+                <th>User</th><th>Amount</th><th>Recipient</th><th>Bank</th>
+                <th>Reason</th><th>Status</th><th>Date</th><th>Actions</th>
+              </tr></thead>
+              <tbody id="transfers-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ LOANS ═══════════ -->
+      <div class="section" id="section-loans">
+        <div class="section-title">Loan Applications</div>
+        <div class="section-sub">Review and approve or reject loan applications.</div>
+        <div class="table-wrap">
+          <div class="table-header">
+            <h3>Loan Applications</h3>
+            <select id="loan-filter" class="search-box" style="width:160px" onchange="loadLoans()">
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="">All</option>
+            </select>
+          </div>
+          <div class="overflow-x">
+            <table class="tbl">
+              <thead><tr>
+                <th>User</th><th>Amount</th><th>Term</th><th>Purpose</th>
+                <th>Income</th><th>Status</th><th>Date</th><th>Actions</th>
+              </tr></thead>
+              <tbody id="loans-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ TICKETS ═══════════ -->
+      <div class="section" id="section-tickets">
+        <div class="section-title">Support Tickets</div>
+        <div class="section-sub">Respond to user support requests.</div>
+        <div class="table-wrap">
+          <div class="table-header">
+            <h3>Tickets</h3>
+            <select id="ticket-filter" class="search-box" style="width:160px" onchange="loadTickets()">
+              <option value="open">Open</option>
+              <option value="in_progress">In Progress</option>
+              <option value="resolved">Resolved</option>
+              <option value="">All</option>
+            </select>
+          </div>
+          <div class="overflow-x">
+            <table class="tbl">
+              <thead><tr>
+                <th>User</th><th>Subject</th><th>Category</th>
+                <th>Status</th><th>Date</th><th>Actions</th>
+              </tr></thead>
+              <tbody id="tickets-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ TRANSACTIONS ═══════════ -->
+      <div class="section" id="section-transactions">
+        <div class="section-title">All Transactions</div>
+        <div class="section-sub">Full ledger of all fund movements.</div>
+        <div class="table-wrap">
+          <div class="table-header">
+            <h3>Transaction Ledger</h3>
+            <input class="search-box" type="text" placeholder="Search..." id="txn-search" oninput="filterTxns()">
+          </div>
+          <div class="overflow-x">
+            <table class="tbl">
+              <thead><tr>
+                <th>User</th><th>Type</th><th>Amount</th><th>Reason</th>
+                <th>Status</th><th>Date</th>
+              </tr></thead>
+              <tbody id="txns-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- User Detail Modal -->
+<div class="modal-overlay" id="modal-user">
+  <div class="modal">
+    <div class="modal-header">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">User Management</h1>
-        <p class="text-gray-600 text-sm mt-1">Manage users, accounts, and funds</p>
+        <div class="modal-title" id="mu-name">User</div>
+        <div style="font-size:12px;color:#4a5568;margin-top:3px" id="mu-email"></div>
       </div>
-      <div class="flex gap-3">
-        <button id="refresh-btn" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg transition">Refresh</button>
-      </div>
+      <button class="modal-close" onclick="closeModal('modal-user')">✕</button>
     </div>
-
-    <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">User</th>
-              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
-              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
-              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Balance</th>
-              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Held</th>
-              <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="users-body" class="bg-white divide-y divide-gray-200">
-          </tbody>
-        </table>
+    <div class="modal-body">
+      <div class="balance-display">
+        <div><div class="amt" id="mu-balance">$0.00</div><div class="lbl">Available Balance</div></div>
+        <div><div class="amt held" id="mu-held">$0.00</div><div class="lbl">Held Funds</div></div>
       </div>
-      <div id="empty-state" class="hidden text-center py-12 text-gray-500">No users found</div>
+      <div class="user-profile-grid">
+        <div class="info-item"><div class="label">Account No.</div><div class="value" id="mu-acct">—</div></div>
+        <div class="info-item"><div class="label">Status</div><div class="value" id="mu-status"></div></div>
+        <div class="info-item"><div class="label">KYC</div><div class="value" id="mu-kyc"></div></div>
+        <div class="info-item"><div class="label">Joined</div><div class="value" id="mu-joined">—</div></div>
+      </div>
+
+      <div class="action-grid">
+        <button class="btn btn-success" onclick="openFundModal()">💵 Credit Funds</button>
+        <button class="btn btn-warning" onclick="openHoldModal()">🔒 Hold Funds</button>
+        <button class="btn btn-ghost" onclick="openReleaseModal()">🔓 Release Hold</button>
+        <button class="btn btn-ghost" onclick="openTxnHistory()">📋 Transactions</button>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" id="mu-toggle-btn" onclick="toggleUserStatus()">Toggle Status</button>
+        <select class="form-select" style="flex:1;font-size:12px;padding:6px 10px" id="mu-kyc-select" onchange="updateKyc()">
+          <option value="">Update KYC Status...</option>
+          <option value="unverified">Unverified</option>
+          <option value="pending">Pending</option>
+          <option value="verified">Verified</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Fund Modal -->
-<div id="fund-modal" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg p-4">
-  <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-    <h3 class="text-lg font-bold text-gray-900 mb-2">Fund User</h3>
-    <p class="text-sm text-gray-600 mb-4" id="fund-user-label">Add credit to user account.</p>
-    <form id="fund-form">
-      <input type="hidden" id="fund-user-id">
-      <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
-      <div class="relative mb-4">
-        <span class="absolute left-3 top-2.5 text-gray-500">$</span>
-        <input type="number" id="fund-amount" step="0.01" min="0.01" required class="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-600 focus:border-brand-600">
-      </div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Reason</label>
-      <input type="text" id="fund-reason" placeholder="e.g. Welcome bonus" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-600 focus:border-brand-600 mb-6">
-      <div class="flex justify-end gap-3">
-        <button type="button" class="close-modal px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-        <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-brand-700 rounded-lg hover:bg-brand-800">Add Funds</button>
-      </div>
-    </form>
+<!-- Credit Modal -->
+<div class="modal-overlay" id="modal-credit">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">💵 Credit Funds</div><button class="modal-close" onclick="closeModal('modal-credit')">✕</button></div>
+    <div class="modal-body">
+      <div class="alert alert-err" id="credit-err"></div>
+      <div class="form-group"><label class="form-label">Amount (USD)</label><input class="form-input" type="number" id="credit-amount" placeholder="0.00" min="0.01" step="0.01"></div>
+      <div class="form-group"><label class="form-label">Reason</label><textarea class="form-textarea" id="credit-reason" placeholder="e.g. Welcome bonus, Account credit..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-credit')">Cancel</button>
+      <button class="btn btn-success" onclick="doCredit()" id="credit-btn">Credit Account</button>
+    </div>
   </div>
 </div>
 
 <!-- Hold Modal -->
-<div id="hold-modal" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg p-4">
-  <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-    <h3 class="text-lg font-bold text-gray-900 mb-2">Hold Funds</h3>
-    <p class="text-sm text-gray-600 mb-4" id="hold-user-label">Place a hold on user's available balance.</p>
-    <form id="hold-form">
-      <input type="hidden" id="hold-user-id">
-      <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
-      <div class="relative mb-4">
-        <span class="absolute left-3 top-2.5 text-gray-500">$</span>
-        <input type="number" id="hold-amount" step="0.01" min="0.01" required class="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-600 focus:border-brand-600">
-      </div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Reason for hold</label>
-      <input type="text" id="hold-reason" placeholder="e.g. Pending verification" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-600 focus:border-brand-600 mb-6">
-      <div class="flex justify-end gap-3">
-        <button type="button" class="close-modal px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-        <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700">Place Hold</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Release Modal -->
-<div id="release-modal" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg p-4">
-  <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-    <h3 class="text-lg font-bold text-gray-900 mb-2">Release Hold</h3>
-    <p class="text-sm text-gray-600 mb-4">Select an active hold to release back to user balance.</p>
-    <form id="release-form">
-      <input type="hidden" id="release-user-id">
-      <label class="block text-sm font-medium text-gray-700 mb-1">Active Hold</label>
-      <select id="release-hold-id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-600 focus:border-brand-600 mb-6">
-        <option value="">Select a hold...</option>
-      </select>
-      <div class="flex justify-end gap-3">
-        <button type="button" class="close-modal px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-        <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">Release Hold</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Transactions Modal -->
-<div id="txns-modal" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg p-4">
-  <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto">
-    <div class="flex justify-between items-center mb-4">
-      <h3 class="text-lg font-bold text-gray-900">Transaction History</h3>
-      <button class="close-modal text-gray-400 hover:text-gray-600">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-      </button>
+<div class="modal-overlay" id="modal-hold">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">🔒 Hold Funds</div><button class="modal-close" onclick="closeModal('modal-hold')">✕</button></div>
+    <div class="modal-body">
+      <div class="alert alert-err" id="hold-err"></div>
+      <div class="alert alert-info" id="hold-info" style="display:block">Available: <strong id="hold-avail">$0.00</strong></div>
+      <div class="form-group"><label class="form-label">Amount to Hold (USD)</label><input class="form-input" type="number" id="hold-amount" placeholder="0.00" min="0.01" step="0.01"></div>
+      <div class="form-group"><label class="form-label">Reason for Hold</label><textarea class="form-textarea" id="hold-reason" placeholder="e.g. Pending KYC verification, Fraud investigation..." required></textarea></div>
     </div>
-    <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
-            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Type</th>
-            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Amount</th>
-            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Reason</th>
-            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
-          </tr>
-        </thead>
-        <tbody id="txns-modal-body" class="divide-y divide-gray-200">
-        </tbody>
-      </table>
-      <div id="txns-modal-empty" class="hidden text-center py-8 text-gray-500">No transactions</div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-hold')">Cancel</button>
+      <button class="btn btn-warning" onclick="doHold()" id="hold-btn">Place Hold</button>
+    </div>
+  </div>
+</div>
+
+<!-- Release Hold Modal -->
+<div class="modal-overlay" id="modal-release">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">🔓 Release Hold</div><button class="modal-close" onclick="closeModal('modal-release')">✕</button></div>
+    <div class="modal-body">
+      <div class="alert alert-err" id="release-err"></div>
+      <div id="active-holds-list"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-release')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Transaction History Modal -->
+<div class="modal-overlay" id="modal-txn-history">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-header"><div class="modal-title">📋 Transaction History</div><button class="modal-close" onclick="closeModal('modal-txn-history')">✕</button></div>
+    <div class="modal-body">
+      <div id="txn-history-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Transfer Review Modal -->
+<div class="modal-overlay" id="modal-transfer-review">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Review Transfer Request</div><button class="modal-close" onclick="closeModal('modal-transfer-review')">✕</button></div>
+    <div class="modal-body">
+      <div class="alert alert-err" id="tr-err"></div>
+      <div id="tr-details" style="background:#0b1120;border:1px solid #1e2d4a;border-radius:8px;padding:16px;margin-bottom:16px;font-size:13px;color:#94a3b8;line-height:1.8"></div>
+      <div class="form-group"><label class="form-label">Admin Note (optional)</label><textarea class="form-textarea" id="tr-note" placeholder="Reason for approval/rejection..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-transfer-review')">Cancel</button>
+      <button class="btn btn-danger" onclick="doTransferReview('rejected')" id="tr-reject-btn">Reject</button>
+      <button class="btn btn-success" onclick="doTransferReview('approved')" id="tr-approve-btn">Approve</button>
+    </div>
+  </div>
+</div>
+
+<!-- Loan Review Modal -->
+<div class="modal-overlay" id="modal-loan-review">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Review Loan Application</div><button class="modal-close" onclick="closeModal('modal-loan-review')">✕</button></div>
+    <div class="modal-body">
+      <div class="alert alert-err" id="lr-err"></div>
+      <div id="lr-details" style="background:#0b1120;border:1px solid #1e2d4a;border-radius:8px;padding:16px;margin-bottom:16px;font-size:13px;color:#94a3b8;line-height:1.8"></div>
+      <div class="form-group"><label class="form-label">Admin Note</label><textarea class="form-textarea" id="lr-note" placeholder="Reason for approval/rejection..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-loan-review')">Cancel</button>
+      <button class="btn btn-danger" onclick="doLoanReview('rejected')" id="lr-reject-btn">Reject</button>
+      <button class="btn btn-success" onclick="doLoanReview('approved')" id="lr-approve-btn">Approve</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ticket Reply Modal -->
+<div class="modal-overlay" id="modal-ticket-reply">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Reply to Ticket</div><button class="modal-close" onclick="closeModal('modal-ticket-reply')">✕</button></div>
+    <div class="modal-body">
+      <div class="alert alert-err" id="tk-err"></div>
+      <div id="tk-details" style="background:#0b1120;border:1px solid #1e2d4a;border-radius:8px;padding:16px;margin-bottom:16px;font-size:13px;color:#94a3b8;line-height:1.8"></div>
+      <div class="form-group"><label class="form-label">Your Reply</label><textarea class="form-textarea" id="tk-reply" style="min-height:100px" placeholder="Type your reply to the user..."></textarea></div>
+      <div class="form-group"><label class="form-label">Update Status</label>
+        <select class="form-select" id="tk-status">
+          <option value="in_progress">In Progress</option>
+          <option value="resolved">Resolved</option>
+          <option value="closed">Closed</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-ticket-reply')">Cancel</button>
+      <button class="btn btn-primary" onclick="doTicketReply()" id="tk-btn">Send Reply</button>
     </div>
   </div>
 </div>
@@ -191,216 +609,423 @@ const SUPA_URL = "https://uatnxwvkpuvxvgngxxez.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhdG54d3ZrcHV2eHZnbmd4eGV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1NjM1OTAsImV4cCI6MjEwMjEzOTU5MH0.l0X90PCIpX4OZoU1yTEpuh3Ro7ZqkP79KCFiH3RQ_lI";
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
-const fmt = (n) => "$" + parseFloat(n || 0).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
-const loading = document.getElementById("loading");
-const accessDenied = document.getElementById("access-denied");
-const adminContent = document.getElementById("admin-content");
-const usersBody = document.getElementById("users-body");
-const emptyState = document.getElementById("empty-state");
+let currentUser = null;
+let allUsers = [];
+let allTxns = [];
+let selectedUserId = null;
+let selectedTransferId = null;
+let selectedLoanId = null;
+let selectedTicketId = null;
 
-let currentUserId = null;
-
-function showModal(id) {
-  const el = document.getElementById(id);
-  el.classList.remove("hidden");
-  el.classList.add("flex");
-}
-function hideModal(id) {
-  const el = document.getElementById(id);
-  el.classList.add("hidden");
-  el.classList.remove("flex");
-}
-
-document.querySelectorAll(".close-modal").forEach(btn => {
-  btn.addEventListener("click", () => {
-    hideModal("fund-modal");
-    hideModal("hold-modal");
-    hideModal("release-modal");
-    hideModal("txns-modal");
-  });
-});
-
+// ── Init ──────────────────────────────────────────────
 async function init() {
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) {
-    window.location.href = "login";
-    return;
-  }
-  currentUserId = session.user.id;
-
-  const { data: profile } = await sb.from("profiles").select("role").eq("id", currentUserId).single();
-  if (!profile || profile.role !== "admin") {
-    loading.classList.add("hidden");
-    accessDenied.classList.remove("hidden");
-    return;
-  }
-
-  await loadUsers();
-  loading.classList.add("hidden");
-  adminContent.classList.remove("hidden");
+  if (!session) { window.location.replace('/login'); return; }
+  const { data: profile } = await sb.from('profiles').select('*').eq('id', session.user.id).single();
+  if (!profile || profile.role !== 'admin') { window.location.replace('/dashboard'); return; }
+  currentUser = profile;
+  document.getElementById('admin-name').textContent = profile.full_name || profile.email.split('@')[0];
+  document.getElementById('admin-avatar').textContent = (profile.full_name || profile.email)[0].toUpperCase();
+  await loadAll();
+  document.getElementById('loader').style.display = 'none';
 }
 
-async function loadUsers() {
-  usersBody.innerHTML = "";
-  const { data: users, error } = await sb.rpc("get_all_profiles");
-  if (error) {
-    usersBody.innerHTML = '<tr><td colspan="7" class="px-6 py-4 text-red-600">Failed to load users: ' + error.message + "</td></tr>";
-    return;
-  }
-  if (!users || users.length === 0) {
-    emptyState.classList.remove("hidden");
-    return;
-  }
-  emptyState.classList.add("hidden");
+async function loadAll() {
+  await Promise.all([loadStats(), loadUsers(), loadTransfers(), loadLoans(), loadTickets(), loadTxns()]);
+}
 
-  users.forEach(u => {
-    const tr = document.createElement("tr");
-    const isSelf = u.id === currentUserId;
-    const roleClass = u.role === "admin" ? "text-purple-700 bg-purple-50" : "text-gray-600 bg-gray-100";
-    const statusClass = u.status === "active" ? "badge-active" : "badge-inactive";
-    const activeBtn = u.status === "active" ? "Deactivate" : "Activate";
-    const activeBtnClass = u.status === "active" ? "text-red-600 hover:text-red-800" : "text-green-600 hover:text-green-800";
-    tr.innerHTML = `
-      <td class="px-6 py-4 whitespace-nowrap">
-        <div class="text-sm font-medium text-gray-900">${u.full_name || "—"}</div>
-        <div class="text-xs text-gray-500">${new Date(u.created_at).toLocaleDateString()}</div>
-      </td>
-      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${u.email}</td>
-      <td class="px-6 py-4 whitespace-nowrap"><span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${roleClass}">${u.role}</span></td>
-      <td class="px-6 py-4 whitespace-nowrap"><span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">${u.status}</span></td>
-      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${fmt(u.balance)}</td>
-      <td class="px-6 py-4 whitespace-nowrap text-sm text-amber-600">${fmt(u.held_funds)}</td>
-      <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-        <div class="flex flex-col sm:flex-row gap-2 justify-end">
-          ${isSelf ? "" : `<button class="fund-btn text-brand-600 hover:text-brand-800" data-id="${u.id}" data-email="${u.email}">Fund</button>`}
-          ${isSelf ? "" : `<button class="hold-btn text-amber-600 hover:text-amber-800" data-id="${u.id}" data-email="${u.email}">Hold</button>`}
-          <button class="release-btn text-blue-600 hover:text-blue-800" data-id="${u.id}" data-email="${u.email}">Release</button>
-          <button class="txns-btn text-gray-600 hover:text-gray-800" data-id="${u.id}" data-email="${u.email}">Txns</button>
-          ${isSelf ? "" : `<button class="toggle-status ${activeBtnClass}" data-id="${u.id}" data-status="${u.status}">${activeBtn}</button>`}
+// ── Stats ─────────────────────────────────────────────
+async function loadStats() {
+  const { data } = await sb.rpc('admin_get_stats');
+  if (!data) return;
+  document.getElementById('s-total-users').textContent = data.total_users;
+  document.getElementById('s-active-users').textContent = data.active_users + ' active';
+  document.getElementById('s-total-balance').textContent = '$' + Number(data.total_balance).toLocaleString('en',{minimumFractionDigits:2});
+  document.getElementById('s-total-held').textContent = '$' + Number(data.total_held).toLocaleString('en',{minimumFractionDigits:2}) + ' held';
+  document.getElementById('s-pending-transfers').textContent = data.pending_transfers;
+  document.getElementById('s-pending-loans').textContent = data.pending_loans;
+  document.getElementById('s-open-tickets').textContent = data.open_tickets;
+  document.getElementById('s-total-txns').textContent = data.total_transactions;
+  // Nav badges
+  document.getElementById('nb-transfers').textContent = data.pending_transfers;
+  document.getElementById('nb-loans').textContent = data.pending_loans;
+  document.getElementById('nb-tickets').textContent = data.open_tickets;
+  // Hide zero badges
+  ['nb-transfers','nb-loans','nb-tickets'].forEach(id => {
+    document.getElementById(id).style.display = document.getElementById(id).textContent === '0' ? 'none' : 'flex';
+  });
+}
+
+// ── Users ─────────────────────────────────────────────
+async function loadUsers() {
+  const { data } = await sb.rpc('admin_get_all_users');
+  allUsers = data || [];
+  renderUsers(allUsers);
+  document.getElementById('user-count').textContent = '(' + allUsers.length + ')';
+}
+
+function renderUsers(users) {
+  const tb = document.getElementById('users-tbody');
+  if (!users.length) { tb.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-icon">👥</div><div class="empty-text">No users found</div></div></td></tr>'; return; }
+  tb.innerHTML = users.map(u => `
+    <tr class="clickable" onclick="openUserModal('${u.id}')">
+      <td>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="avatar" style="width:28px;height:28px;font-size:11px">${(u.full_name||u.email)[0].toUpperCase()}</div>
+          <div>
+            <div style="font-weight:600;color:#e2e8f0">${u.full_name || '—'}</div>
+            <div style="font-size:11px;color:#4a5568">${u.email}</div>
+          </div>
         </div>
       </td>
-    `;
-    usersBody.appendChild(tr);
-  });
-
-  bindActions();
+      <td style="font-family:monospace;font-size:12px">${u.account_number||'—'}</td>
+      <td style="color:#4ade80;font-weight:700">$${Number(u.balance||0).toLocaleString('en',{minimumFractionDigits:2})}</td>
+      <td style="color:#fbbf24">$${Number(u.held_funds||0).toLocaleString('en',{minimumFractionDigits:2})}</td>
+      <td><span class="badge badge-${u.status}">${u.status}</span></td>
+      <td><span class="badge badge-${u.kyc_status||'unverified'}">${u.kyc_status||'unverified'}</span></td>
+      <td>${new Date(u.created_at).toLocaleDateString()}</td>
+    </tr>`).join('');
 }
 
-function bindActions() {
-  document.querySelectorAll(".toggle-status").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      const newStatus = btn.dataset.status === "active" ? "inactive" : "active";
-      const { error } = await sb.rpc("update_user_status", { target_id: btn.dataset.id, new_status: newStatus });
-      if (error) alert("Failed: " + error.message);
-      else await loadUsers();
-    });
-  });
+function filterUsers() {
+  const q = document.getElementById('user-search').value.toLowerCase();
+  renderUsers(allUsers.filter(u => (u.email||'').toLowerCase().includes(q) || (u.full_name||'').toLowerCase().includes(q)));
+}
 
-  document.querySelectorAll(".fund-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      document.getElementById("fund-user-id").value = btn.dataset.id;
-      document.getElementById("fund-user-label").textContent = "Add credit to " + btn.dataset.email;
-      document.getElementById("fund-amount").value = "";
-      document.getElementById("fund-reason").value = "";
-      showModal("fund-modal");
-    });
-  });
+// ── User Modal ────────────────────────────────────────
+function openUserModal(uid) {
+  const u = allUsers.find(x => x.id === uid);
+  if (!u) return;
+  selectedUserId = uid;
+  document.getElementById('mu-name').textContent = u.full_name || u.email;
+  document.getElementById('mu-email').textContent = u.email;
+  document.getElementById('mu-balance').textContent = '$' + Number(u.balance||0).toLocaleString('en',{minimumFractionDigits:2});
+  document.getElementById('mu-held').textContent = '$' + Number(u.held_funds||0).toLocaleString('en',{minimumFractionDigits:2});
+  document.getElementById('mu-acct').textContent = u.account_number || '—';
+  document.getElementById('mu-status').innerHTML = `<span class="badge badge-${u.status}">${u.status}</span>`;
+  document.getElementById('mu-kyc').innerHTML = `<span class="badge badge-${u.kyc_status||'unverified'}">${u.kyc_status||'unverified'}</span>`;
+  document.getElementById('mu-joined').textContent = new Date(u.created_at).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'});
+  document.getElementById('mu-toggle-btn').textContent = u.status === 'active' ? '🚫 Deactivate User' : '✅ Activate User';
+  document.getElementById('mu-kyc-select').value = '';
+  openModal('modal-user');
+}
 
-  document.querySelectorAll(".hold-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      document.getElementById("hold-user-id").value = btn.dataset.id;
-      document.getElementById("hold-user-label").textContent = "Place a hold on " + btn.dataset.email + "'s available balance.";
-      document.getElementById("hold-amount").value = "";
-      document.getElementById("hold-reason").value = "";
-      showModal("hold-modal");
-    });
-  });
+async function toggleUserStatus() {
+  const u = allUsers.find(x => x.id === selectedUserId);
+  const newStatus = u.status === 'active' ? 'inactive' : 'active';
+  await sb.from('profiles').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', selectedUserId);
+  closeModal('modal-user');
+  await loadUsers();
+  await loadStats();
+}
 
-  document.querySelectorAll(".release-btn").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      const userId = btn.dataset.id;
-      document.getElementById("release-user-id").value = userId;
-      const select = document.getElementById("release-hold-id");
-      select.innerHTML = '<option value="">Loading...</option>';
-      showModal("release-modal");
-      const { data, error } = await sb.from("transactions").select("id,amount,reason,created_at")
-        .eq("user_id", userId).eq("type", "hold").eq("status", "active").order("created_at", { ascending: false });
-      if (error) { select.innerHTML = '<option value="">Error loading holds</option>'; return; }
-      if (!data || data.length === 0) { select.innerHTML = '<option value="">No active holds</option>'; return; }
-      select.innerHTML = data.map(h => `<option value="${h.id}">${fmt(h.amount)} — ${h.reason} (${new Date(h.created_at).toLocaleDateString()})</option>`).join("");
-    });
-  });
+async function updateKyc() {
+  const val = document.getElementById('mu-kyc-select').value;
+  if (!val) return;
+  await sb.rpc('admin_update_kyc', { target_id: selectedUserId, new_kyc_status: val });
+  closeModal('modal-user');
+  await loadUsers();
+}
 
-  document.querySelectorAll(".txns-btn").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      const userId = btn.dataset.id;
-      const tbody = document.getElementById("txns-modal-body");
-      const empty = document.getElementById("txns-modal-empty");
-      tbody.innerHTML = "";
-      showModal("txns-modal");
-      const { data, error } = await sb.rpc("admin_user_transactions", { target_id: userId });
-      if (error) { tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-red-600">Error: ' + error.message + "</td></tr>"; return; }
-      if (!data || data.length === 0) { empty.classList.remove("hidden"); return; }
-      empty.classList.add("hidden");
-      data.forEach(t => {
-        const tr = document.createElement("tr");
-        const typeColor = t.type === "credit" ? "text-green-600" : (t.type === "hold" ? "text-red-600" : "text-blue-600");
-        tr.innerHTML = `
-          <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${new Date(t.created_at).toLocaleString()}</td>
-          <td class="px-4 py-2 whitespace-nowrap text-sm font-medium ${typeColor}">${t.type}</td>
-          <td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">${fmt(t.amount)}</td>
-          <td class="px-4 py-2 text-sm text-gray-600 max-w-xs truncate">${t.reason || "-"}</td>
-          <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${t.status}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    });
+// ── Fund Operations ───────────────────────────────────
+function openFundModal() { closeModal('modal-user'); document.getElementById('credit-amount').value=''; document.getElementById('credit-reason').value=''; document.getElementById('credit-err').style.display='none'; openModal('modal-credit'); }
+function openHoldModal() {
+  const u = allUsers.find(x => x.id === selectedUserId);
+  closeModal('modal-user');
+  document.getElementById('hold-amount').value=''; document.getElementById('hold-reason').value=''; document.getElementById('hold-err').style.display='none';
+  document.getElementById('hold-avail').textContent = '$' + Number(u?.balance||0).toLocaleString('en',{minimumFractionDigits:2});
+  openModal('modal-hold');
+}
+
+async function openReleaseModal() {
+  closeModal('modal-user');
+  document.getElementById('release-err').style.display='none';
+  const { data: holds } = await sb.from('transactions').select('*').eq('user_id', selectedUserId).eq('type','hold').eq('status','active').order('created_at',{ascending:false});
+  const el = document.getElementById('active-holds-list');
+  if (!holds || !holds.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">No active holds on this account.</div></div>'; }
+  else {
+    el.innerHTML = holds.map(h => `
+      <div style="background:#0b1120;border:1px solid #1e2d4a;border-radius:8px;padding:14px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div>
+          <div style="font-weight:700;color:#fbbf24">$${Number(h.amount).toLocaleString('en',{minimumFractionDigits:2})}</div>
+          <div style="font-size:12px;color:#4a5568;margin-top:3px">${h.reason}</div>
+          <div style="font-size:11px;color:#334155;margin-top:2px">${new Date(h.created_at).toLocaleDateString()}</div>
+        </div>
+        <button class="btn btn-success btn-sm" onclick="doRelease('${h.id}')">Release</button>
+      </div>`).join('');
+  }
+  openModal('modal-release');
+}
+
+async function openTxnHistory() {
+  closeModal('modal-user');
+  const { data: txns } = await sb.from('transactions').select('*').eq('user_id', selectedUserId).order('created_at',{ascending:false}).limit(50);
+  const el = document.getElementById('txn-history-body');
+  if (!txns || !txns.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No transactions yet.</div></div>'; }
+  else {
+    el.innerHTML = `<div class="overflow-x"><table class="tbl"><thead><tr><th>Type</th><th>Amount</th><th>Reason</th><th>Status</th><th>Date</th></tr></thead><tbody>` +
+      txns.map(t => `<tr><td><span class="badge badge-${t.type}">${t.type}</span></td><td style="font-weight:700;color:${t.type==='credit'?'#4ade80':t.type==='hold'?'#fbbf24':'#60a5fa'}">$${Number(t.amount).toFixed(2)}</td><td style="max-width:180px;white-space:normal">${t.reason||'—'}</td><td><span class="badge badge-${t.status}">${t.status}</span></td><td>${new Date(t.created_at).toLocaleDateString()}</td></tr>`).join('') +
+      '</tbody></table></div>';
+  }
+  openModal('modal-txn-history');
+}
+
+async function doCredit() {
+  const amount = parseFloat(document.getElementById('credit-amount').value);
+  const reason = document.getElementById('credit-reason').value.trim();
+  if (!amount || amount <= 0) { showAlert('credit-err','Enter a valid amount'); return; }
+  if (!reason) { showAlert('credit-err','Please provide a reason'); return; }
+  setLoading('credit-btn', true, 'Processing...');
+  const { error } = await sb.rpc('admin_credit_user', { target_id: selectedUserId, amount, reason });
+  setLoading('credit-btn', false, 'Credit Account');
+  if (error) { showAlert('credit-err', error.message); return; }
+  closeModal('modal-credit');
+  await loadUsers(); await loadStats(); await loadTxns();
+}
+
+async function doHold() {
+  const amount = parseFloat(document.getElementById('hold-amount').value);
+  const reason = document.getElementById('hold-reason').value.trim();
+  if (!amount || amount <= 0) { showAlert('hold-err','Enter a valid amount'); return; }
+  if (!reason) { showAlert('hold-err','Reason is required for placing a hold'); return; }
+  setLoading('hold-btn', true, 'Placing hold...');
+  const { error } = await sb.rpc('admin_hold_funds', { target_id: selectedUserId, amount, reason });
+  setLoading('hold-btn', false, 'Place Hold');
+  if (error) { showAlert('hold-err', error.message); return; }
+  closeModal('modal-hold');
+  await loadUsers(); await loadStats();
+}
+
+async function doRelease(holdId) {
+  const { error } = await sb.rpc('admin_release_hold', { hold_transaction_id: holdId });
+  if (error) { showAlert('release-err', error.message); return; }
+  closeModal('modal-release');
+  await loadUsers(); await loadStats();
+}
+
+// ── Transfers ─────────────────────────────────────────
+async function loadTransfers() {
+  const status = document.getElementById('transfer-filter').value;
+  let q = sb.from('transfer_requests').select('*').order('created_at',{ascending:false});
+  if (status) q = q.eq('status', status);
+  const { data } = await q;
+  const users = {};
+  allUsers.forEach(u => users[u.id] = u.email);
+  const tb = document.getElementById('transfers-tbody');
+  if (!data || !data.length) { tb.innerHTML = '<tr><td colspan="8"><div class="empty"><div class="empty-icon">✅</div><div class="empty-text">No transfer requests</div></div></td></tr>'; return; }
+  tb.innerHTML = data.map(t => `
+    <tr>
+      <td>${users[t.user_id]||t.user_id.substring(0,8)}</td>
+      <td style="font-weight:700;color:#f1f5f9">$${Number(t.amount).toFixed(2)}</td>
+      <td>${t.recipient_name}</td>
+      <td>${t.bank_name}</td>
+      <td style="max-width:140px;white-space:normal;font-size:12px">${t.reason||'—'}</td>
+      <td><span class="badge badge-${t.status}">${t.status}</span></td>
+      <td>${new Date(t.created_at).toLocaleDateString()}</td>
+      <td>${t.status==='pending'?`<button class="btn btn-ghost btn-sm" onclick="openTransferReview('${t.id}')">Review</button>`:'<span style="color:#334155;font-size:12px">Reviewed</span>'}</td>
+    </tr>`).join('');
+}
+
+function openTransferReview(tid) {
+  selectedTransferId = tid;
+  document.getElementById('tr-err').style.display='none';
+  document.getElementById('tr-note').value='';
+  // Fetch transfer details inline
+  sb.from('transfer_requests').select('*').eq('id', tid).single().then(({data:t}) => {
+    const users = {};
+    allUsers.forEach(u => users[u.id] = u.email);
+    document.getElementById('tr-details').innerHTML = `
+      <div><strong style="color:#e2e8f0">User:</strong> ${users[t.user_id]||t.user_id}</div>
+      <div><strong style="color:#e2e8f0">Amount:</strong> <span style="color:#4ade80;font-weight:700">$${Number(t.amount).toFixed(2)}</span></div>
+      <div><strong style="color:#e2e8f0">To:</strong> ${t.recipient_name} — ${t.bank_name}</div>
+      <div><strong style="color:#e2e8f0">Account:</strong> ${t.recipient_account}</div>
+      <div><strong style="color:#e2e8f0">Reason:</strong> ${t.reason||'—'}</div>
+      <div><strong style="color:#e2e8f0">Submitted:</strong> ${new Date(t.created_at).toLocaleString()}</div>`;
+    openModal('modal-transfer-review');
   });
 }
 
-document.getElementById("fund-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const userId = document.getElementById("fund-user-id").value;
-  const amount = parseFloat(document.getElementById("fund-amount").value);
-  const reason = document.getElementById("fund-reason").value.trim();
-  if (!amount || amount <= 0) { alert("Enter a positive amount"); return; }
-  const { error } = await sb.rpc("admin_credit_user", { target_id: userId, amount: amount, reason: reason });
-  if (error) alert("Failed to fund: " + error.message);
-  else { hideModal("fund-modal"); await loadUsers(); }
-});
+async function doTransferReview(status) {
+  const note = document.getElementById('tr-note').value.trim();
+  const btnId = status === 'approved' ? 'tr-approve-btn' : 'tr-reject-btn';
+  setLoading(btnId, true, status === 'approved' ? 'Approving...' : 'Rejecting...');
+  const { error } = await sb.rpc('admin_review_transfer', { transfer_id: selectedTransferId, new_status: status, note });
+  setLoading(btnId, false, status === 'approved' ? 'Approve' : 'Reject');
+  if (error) { showAlert('tr-err', error.message); return; }
+  closeModal('modal-transfer-review');
+  await loadTransfers(); await loadStats(); await loadUsers(); await loadTxns();
+}
 
-document.getElementById("hold-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const userId = document.getElementById("hold-user-id").value;
-  const amount = parseFloat(document.getElementById("hold-amount").value);
-  const reason = document.getElementById("hold-reason").value.trim();
-  if (!amount || amount <= 0) { alert("Enter a positive amount"); return; }
-  const { error } = await sb.rpc("admin_hold_funds", { target_id: userId, amount: amount, reason: reason });
-  if (error) alert("Failed to hold: " + error.message);
-  else { hideModal("hold-modal"); await loadUsers(); }
-});
+// ── Loans ─────────────────────────────────────────────
+async function loadLoans() {
+  const status = document.getElementById('loan-filter').value;
+  let q = sb.from('loan_applications').select('*').order('created_at',{ascending:false});
+  if (status) q = q.eq('status', status);
+  const { data } = await q;
+  const users = {};
+  allUsers.forEach(u => users[u.id] = u.email);
+  const tb = document.getElementById('loans-tbody');
+  if (!data || !data.length) { tb.innerHTML = '<tr><td colspan="8"><div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No loan applications</div></div></td></tr>'; return; }
+  tb.innerHTML = data.map(l => `
+    <tr>
+      <td>${users[l.user_id]||l.user_id.substring(0,8)}</td>
+      <td style="font-weight:700;color:#f1f5f9">$${Number(l.amount).toFixed(2)}</td>
+      <td>${l.term_months} mo</td>
+      <td style="max-width:140px;white-space:normal">${l.purpose}</td>
+      <td>${l.monthly_income?'$'+Number(l.monthly_income).toFixed(2):'—'}</td>
+      <td><span class="badge badge-${l.status}">${l.status}</span></td>
+      <td>${new Date(l.created_at).toLocaleDateString()}</td>
+      <td>${l.status==='pending'?`<button class="btn btn-ghost btn-sm" onclick="openLoanReview('${l.id}')">Review</button>`:'<span style="color:#334155;font-size:12px">Reviewed</span>'}</td>
+    </tr>`).join('');
+}
 
-document.getElementById("release-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const holdId = document.getElementById("release-hold-id").value;
-  if (!holdId) { alert("Select a hold to release"); return; }
-  const { error } = await sb.rpc("admin_release_hold", { hold_transaction_id: holdId });
-  if (error) alert("Failed to release: " + error.message);
-  else { hideModal("release-modal"); await loadUsers(); }
-});
+function openLoanReview(lid) {
+  selectedLoanId = lid;
+  document.getElementById('lr-err').style.display='none';
+  document.getElementById('lr-note').value='';
+  sb.from('loan_applications').select('*').eq('id', lid).single().then(({data:l}) => {
+    const users = {};
+    allUsers.forEach(u => users[u.id] = u.email);
+    document.getElementById('lr-details').innerHTML = `
+      <div><strong style="color:#e2e8f0">Applicant:</strong> ${users[l.user_id]||l.user_id}</div>
+      <div><strong style="color:#e2e8f0">Amount:</strong> <span style="color:#4ade80;font-weight:700">$${Number(l.amount).toFixed(2)}</span></div>
+      <div><strong style="color:#e2e8f0">Term:</strong> ${l.term_months} months</div>
+      <div><strong style="color:#e2e8f0">Purpose:</strong> ${l.purpose}</div>
+      <div><strong style="color:#e2e8f0">Monthly Income:</strong> ${l.monthly_income?'$'+Number(l.monthly_income).toFixed(2):'Not provided'}</div>
+      <div><strong style="color:#e2e8f0">Submitted:</strong> ${new Date(l.created_at).toLocaleString()}</div>`;
+    openModal('modal-loan-review');
+  });
+}
 
-document.getElementById("refresh-btn").addEventListener("click", loadUsers);
-document.getElementById("logout-btn").addEventListener("click", async () => {
-  await sb.auth.signOut();
-  window.location.href = "login";
-});
+async function doLoanReview(status) {
+  const note = document.getElementById('lr-note').value.trim();
+  const btnId = status === 'approved' ? 'lr-approve-btn' : 'lr-reject-btn';
+  setLoading(btnId, true, status === 'approved' ? 'Approving...' : 'Rejecting...');
+  const { error } = await sb.rpc('admin_review_loan', { loan_id: selectedLoanId, new_status: status, note });
+  setLoading(btnId, false, status === 'approved' ? 'Approve' : 'Reject');
+  if (error) { showAlert('lr-err', error.message); return; }
+  closeModal('modal-loan-review');
+  await loadLoans(); await loadStats(); await loadUsers(); await loadTxns();
+}
 
-sb.auth.onAuthStateChange((event) => {
-  if (event === "SIGNED_OUT") window.location.href = "login";
-});
+// ── Tickets ───────────────────────────────────────────
+async function loadTickets() {
+  const status = document.getElementById('ticket-filter').value;
+  let q = sb.from('support_tickets').select('*').order('created_at',{ascending:false});
+  if (status) q = q.eq('status', status);
+  const { data } = await q;
+  const users = {};
+  allUsers.forEach(u => users[u.id] = u.email);
+  const tb = document.getElementById('tickets-tbody');
+  if (!data || !data.length) { tb.innerHTML = '<tr><td colspan="6"><div class="empty"><div class="empty-icon">🎫</div><div class="empty-text">No support tickets</div></div></td></tr>'; return; }
+  tb.innerHTML = data.map(t => `
+    <tr>
+      <td>${users[t.user_id]||t.user_id.substring(0,8)}</td>
+      <td style="max-width:160px;white-space:normal;color:#e2e8f0">${t.subject}</td>
+      <td><span class="badge badge-user">${t.category}</span></td>
+      <td><span class="badge badge-${t.status}">${t.status.replace('_',' ')}</span></td>
+      <td>${new Date(t.created_at).toLocaleDateString()}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="openTicketReply('${t.id}')">Reply</button></td>
+    </tr>`).join('');
+}
+
+function openTicketReply(tid) {
+  selectedTicketId = tid;
+  document.getElementById('tk-err').style.display='none';
+  document.getElementById('tk-reply').value='';
+  sb.from('support_tickets').select('*').eq('id', tid).single().then(({data:t}) => {
+    const users = {};
+    allUsers.forEach(u => users[u.id] = u.email);
+    document.getElementById('tk-details').innerHTML = `
+      <div><strong style="color:#e2e8f0">From:</strong> ${users[t.user_id]||t.user_id}</div>
+      <div><strong style="color:#e2e8f0">Subject:</strong> ${t.subject}</div>
+      <div><strong style="color:#e2e8f0">Category:</strong> ${t.category}</div>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid #1e2d4a;color:#cbd5e1">${t.message}</div>
+      ${t.admin_reply?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid #1e2d4a"><strong style="color:#60a5fa">Previous Reply:</strong><div style="color:#94a3b8;margin-top:4px">${t.admin_reply}</div></div>`:''}`;
+    openModal('modal-ticket-reply');
+  });
+}
+
+async function doTicketReply() {
+  const reply = document.getElementById('tk-reply').value.trim();
+  const status = document.getElementById('tk-status').value;
+  if (!reply) { showAlert('tk-err','Please write a reply'); return; }
+  setLoading('tk-btn', true, 'Sending...');
+  const { error } = await sb.rpc('admin_reply_ticket', { ticket_id: selectedTicketId, reply, new_status: status });
+  setLoading('tk-btn', false, 'Send Reply');
+  if (error) { showAlert('tk-err', error.message); return; }
+  closeModal('modal-ticket-reply');
+  await loadTickets(); await loadStats();
+}
+
+// ── Transactions ──────────────────────────────────────
+async function loadTxns() {
+  const { data } = await sb.from('transactions').select('*').order('created_at',{ascending:false}).limit(200);
+  allTxns = data || [];
+  renderTxns(allTxns);
+  // Recent activity on dashboard
+  const el = document.getElementById('recent-activity');
+  if (!allTxns.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">No transactions yet</div></div>'; return; }
+  const users = {};
+  allUsers.forEach(u => users[u.id] = u.email);
+  el.innerHTML = '<div class="activity-list" style="padding:4px 20px">' +
+    allTxns.slice(0,10).map(t => `
+      <div class="activity-item">
+        <div class="activity-dot ${t.type==='credit'?'dot-green':t.type==='hold'?'dot-yellow':t.type==='release'?'dot-blue':'dot-red'}"></div>
+        <div class="activity-info">
+          <div class="activity-title">${t.reason||t.type}</div>
+          <div class="activity-meta">${users[t.user_id]||'—'} · ${new Date(t.created_at).toLocaleDateString()}</div>
+        </div>
+        <div class="activity-amount ${t.type==='credit'||t.type==='release'?'amount-credit':'amount-debit'}">
+          ${t.type==='credit'||t.type==='release'?'+':'-'}$${Number(t.amount).toFixed(2)}
+        </div>
+      </div>`).join('') + '</div>';
+}
+
+function renderTxns(txns) {
+  const users = {};
+  allUsers.forEach(u => users[u.id] = u.email);
+  const tb = document.getElementById('txns-tbody');
+  if (!txns.length) { tb.innerHTML = '<tr><td colspan="6"><div class="empty"><div class="empty-icon">📊</div><div class="empty-text">No transactions</div></div></td></tr>'; return; }
+  tb.innerHTML = txns.map(t => `
+    <tr>
+      <td>${users[t.user_id]||t.user_id.substring(0,8)}</td>
+      <td><span class="badge badge-${t.type}">${t.type}</span></td>
+      <td style="font-weight:700;color:${t.type==='credit'?'#4ade80':t.type==='hold'?'#fbbf24':'#60a5fa'}">$${Number(t.amount).toFixed(2)}</td>
+      <td style="max-width:200px;white-space:normal;font-size:12px">${t.reason||'—'}</td>
+      <td><span class="badge badge-${t.status}">${t.status}</span></td>
+      <td>${new Date(t.created_at).toLocaleDateString()}</td>
+    </tr>`).join('');
+}
+
+function filterTxns() {
+  const q = document.getElementById('txn-search').value.toLowerCase();
+  const users = {};
+  allUsers.forEach(u => users[u.id] = u.email);
+  renderTxns(allTxns.filter(t => (t.reason||'').toLowerCase().includes(q) || (users[t.user_id]||'').toLowerCase().includes(q) || t.type.includes(q)));
+}
+
+// ── UI Helpers ────────────────────────────────────────
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('section-' + id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.getElementById('page-title').textContent = event.currentTarget.textContent.trim().replace(/\d+/g,'').trim();
+  closeSidebar();
+}
+function openModal(id) { document.getElementById(id).classList.add('open'); document.body.style.overflow='hidden'; }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); document.body.style.overflow=''; }
+function showAlert(id, msg) { const el=document.getElementById(id); el.textContent=msg; el.style.display='block'; setTimeout(()=>el.style.display='none',5000); }
+function setLoading(btnId, loading, text) { const b=document.getElementById(btnId); if(b){b.disabled=loading; b.textContent=text;} }
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('mob-backdrop').classList.toggle('show'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('mob-backdrop').classList.remove('show'); }
+function doLogout() { sb.auth.signOut().then(()=>window.location.replace('/login')); }
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if(e.target===o) closeModal(o.id); }));
 
 init();
 </script>
-
 </body>
 </html>

@@ -3,145 +3,288 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard - MercurialVest</title>
-  <meta name="description" content="Your MercurialVest digital banking dashboard">
+  <title>My Dashboard — MercurialVest</title>
   <link rel="icon" type="image/svg+xml" href="storage/app/public/photos/favicon.svg">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brand: { 50: '#eff6ff', 100: '#dbeafe', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' }
-          },
-          fontFamily: { sans: ['Inter','sans-serif'] }
-        }
-      }
-    }
-  </script>
   <style>
-    .loader{border:3px solid #f3f4f6;border-top:3px solid #2563eb;border-radius:50%;width:28px;height:28px;animation:spin 1s linear infinite}
-    @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
-    .card{transition:transform .2s,box-shadow .2s}
-    .card:hover{transform:translateY(-2px);box-shadow:0 10px 25px -5px rgba(0,0,0,.1)}
-    .txn-credit{color:#16a34a}
-    .txn-hold{color:#dc2626}
-    .txn-release{color:#2563eb}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#f0f4f8;color:#1e293b;min-height:100vh;display:flex;flex-direction:column}
+/* Navbar */
+.navbar{background:#0f2356;padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.navbar a{color:#fff;text-decoration:none}
+.navbar .nav-links{display:flex;gap:20px;align-items:center;font-size:14px}
+.navbar .nav-links a:hover{color:#93c5fd}
+.logout-btn{background:#1e3a8a;color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
+.logout-btn:hover{background:#2563eb}
+/* Layout */
+.page{flex:1;max-width:1100px;margin:0 auto;width:100%;padding:32px 20px}
+@media(max-width:600px){.page{padding:20px 14px}}
+/* Welcome */
+.welcome{margin-bottom:28px}
+.welcome h1{font-size:24px;font-weight:800;color:#0f2356}
+.welcome p{font-size:14px;color:#64748b;margin-top:4px}
+/* Balance cards */
+.balance-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:28px}
+.bal-card{border-radius:14px;padding:22px;position:relative;overflow:hidden}
+.bal-card.primary{background:linear-gradient(135deg,#0f2356,#1d4ed8);color:#fff}
+.bal-card.secondary{background:#fff;border:1.5px solid #e2e8f0;color:#1e293b}
+.bal-label{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:.7;margin-bottom:8px}
+.bal-amount{font-size:30px;font-weight:800;line-height:1}
+.bal-card.primary .bal-amount{color:#fff}
+.bal-card.secondary .bal-amount{color:#0f2356}
+.bal-sub{font-size:12px;opacity:.6;margin-top:6px}
+.bal-icon{position:absolute;right:18px;top:18px;font-size:26px;opacity:.2}
+/* Quick actions */
+.section-heading{font-size:15px;font-weight:700;color:#0f2356;margin-bottom:14px}
+.actions-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:28px}
+.action-btn{background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:18px 14px;text-align:center;cursor:pointer;transition:.2s;text-decoration:none;color:#1e293b}
+.action-btn:hover{border-color:#2563eb;background:#eff6ff;transform:translateY(-2px);box-shadow:0 4px 12px rgba(37,99,235,.12)}
+.action-btn .icon{font-size:26px;margin-bottom:8px}
+.action-btn .label{font-size:12px;font-weight:600;color:#374151}
+/* Panels */
+.panel{background:#fff;border:1.5px solid #e2e8f0;border-radius:14px;overflow:hidden;margin-bottom:24px}
+.panel-header{padding:16px 20px;border-bottom:1.5px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.panel-header h3{font-size:14px;font-weight:700;color:#0f2356}
+.panel-body{padding:16px 20px}
+/* Table */
+.tbl{width:100%;border-collapse:collapse;min-width:500px}
+.tbl th{padding:10px 12px;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#94a3b8;border-bottom:1px solid #f1f5f9;text-align:left;white-space:nowrap}
+.tbl td{padding:12px 12px;font-size:13px;color:#64748b;border-bottom:1px solid #f8fafc;white-space:nowrap}
+.tbl tr:last-child td{border-bottom:none}
+.overflow-x{overflow-x:auto}
+/* Badges */
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-credit{background:#dcfce7;color:#166534}
+.badge-hold{background:#fef3c7;color:#92400e}
+.badge-release,.badge-transfer{background:#dbeafe;color:#1e40af}
+.badge-active,.badge-approved,.badge-completed{background:#dcfce7;color:#166534}
+.badge-inactive,.badge-rejected{background:#fee2e2;color:#991b1b}
+.badge-pending{background:#fef3c7;color:#92400e}
+.badge-verified{background:#dcfce7;color:#166534}
+.badge-unverified,.badge-cancelled{background:#f1f5f9;color:#64748b}
+/* Form */
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:12px;font-weight:700;color:#374151;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.form-input,.form-select,.form-textarea{width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:11px 14px;font-size:14px;color:#1e293b;outline:none;transition:.15s;font-family:inherit}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:#2563eb;background:#fff}
+.form-textarea{resize:vertical;min-height:80px}
+.form-select option{background:#fff}
+/* Buttons */
+.btn{padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:#1d4ed8;color:#fff}.btn-primary:hover{background:#1e40af}
+.btn-sm{padding:7px 14px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:16px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-header{padding:20px 22px 0;display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:17px;font-weight:700;color:#0f2356}
+.modal-close{background:transparent;border:none;font-size:22px;cursor:pointer;color:#94a3b8;line-height:1}.modal-close:hover{color:#ef4444}
+.modal-body{padding:18px 22px 22px}
+.modal-footer{padding:0 22px 18px;display:flex;gap:10px;justify-content:flex-end}
+/* Alert */
+.alert{padding:12px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none}
+.alert-err{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+.alert-ok{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}
+/* Loader */
+.loader-overlay{position:fixed;inset:0;background:rgba(240,244,248,.92);z-index:999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+.spinner{width:40px;height:40px;border:4px solid #dbeafe;border-top:4px solid #1d4ed8;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loader-text{font-size:14px;color:#1d4ed8;font-weight:600}
+/* Empty */
+.empty{text-align:center;padding:32px;color:#94a3b8;font-size:13px}
+/* Status bar */
+.status-bar{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:24px;font-size:13px;color:#1e40af}
+.status-bar.warn{background:#fffbeb;border-color:#fcd34d;color:#92400e}
+footer{background:#0f2356;color:#93c5fd;text-align:center;padding:16px;font-size:12px}
   </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body>
 
-<nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="flex justify-between h-16 items-center">
-      <a href="/" class="flex items-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 48" width="200" height="44" role="img" aria-label="MercurialVest"><path d="M8 10 L8 38 L16 38 L16 22 L22 34 L28 22 L28 38 L36 38 L36 10 L28 10 L22 24 L16 10 Z" fill="#0f2356"/><path d="M6 42 Q22 35 38 42" stroke="#2563eb" stroke-width="2.5" fill="none" stroke-linecap="round"/><text x="46" y="29" font-family="Segoe UI,Arial,sans-serif" font-size="17" font-weight="700" fill="#0f2356" letter-spacing="-0.3">MercurialVest</text><text x="47" y="42" font-family="Segoe UI,Arial,sans-serif" font-size="8" font-weight="500" fill="#2563eb" letter-spacing="2.5">BANK</text></svg>
-      </a>
-      <div class="flex items-center gap-4">
-        <span id="user-email" class="text-sm text-gray-600 hidden sm:inline"></span>
-        <button id="logout-btn" class="bg-brand-700 hover:bg-brand-800 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Logout</button>
-      </div>
-    </div>
+<div class="loader-overlay" id="loader">
+  <div class="spinner"></div>
+  <span class="loader-text">Loading your dashboard...</span>
+</div>
+
+<nav class="navbar">
+  <a href="/">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 48" width="160" height="36">
+      <path d="M8 10 L8 38 L16 38 L16 22 L22 34 L28 22 L28 38 L36 38 L36 10 L28 10 L22 24 L16 10 Z" fill="#fff"/>
+      <path d="M6 42 Q22 35 38 42" stroke="#93c5fd" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <text x="46" y="29" font-family="Inter,sans-serif" font-size="17" font-weight="700" fill="#fff">MercurialVest</text>
+      <text x="47" y="42" font-family="Inter,sans-serif" font-size="8" font-weight="500" fill="#93c5fd" letter-spacing="2.5">BANK</text>
+    </svg>
+  </a>
+  <div class="nav-links">
+    <span id="nav-acct" style="font-size:12px;color:#93c5fd;font-family:monospace"></span>
+    <button class="logout-btn" onclick="doLogout()">Sign Out</button>
   </div>
 </nav>
 
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<div class="page">
 
-  <div id="loading" class="flex justify-center py-20">
-    <div class="loader"></div>
+  <div class="welcome">
+    <h1 id="welcome-msg">Welcome back 👋</h1>
+    <p id="welcome-sub">Here's your account overview</p>
   </div>
 
-  <div id="auth-guard" class="hidden text-center py-20">
-    <h1 class="text-2xl font-bold text-gray-900">Please sign in</h1>
-    <p class="text-gray-600 mt-2">You need to be logged in to view your dashboard.</p>
-    <a href="login" class="inline-block mt-6 bg-brand-700 hover:bg-brand-800 text-white font-medium px-6 py-3 rounded-lg">Go to Login</a>
+  <!-- KYC alert -->
+  <div class="status-bar warn" id="kyc-alert" style="display:none">
+    ⚠️ Your account is not yet KYC verified. Some features may be limited. Please contact support to complete verification.
   </div>
 
-  <div id="dashboard-content" class="hidden">
-    <div class="mb-6">
-      <h1 class="text-2xl font-bold text-gray-900" id="welcome-text">Welcome</h1>
-      <p class="text-gray-600 text-sm mt-1">Manage your MercurialVest account and explore banking services.</p>
+  <!-- Balances -->
+  <div class="balance-grid">
+    <div class="bal-card primary">
+      <div class="bal-label">Available Balance</div>
+      <div class="bal-amount" id="bal-available">$0.00</div>
+      <div class="bal-sub">Ready to use</div>
+      <div class="bal-icon">💳</div>
     </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-      <div class="card bg-white rounded-xl border border-gray-100 p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-medium text-gray-500">Available Balance</h3>
-          <span class="h-2 w-2 rounded-full bg-green-500"></span>
-        </div>
-        <p class="text-3xl font-bold text-gray-900" id="balance-text">$0.00</p>
-        <p class="text-sm text-gray-500 mt-1">Funds available for use</p>
-      </div>
-
-      <div class="card bg-white rounded-xl border border-gray-100 p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-medium text-gray-500">Held Funds</h3>
-          <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-        </div>
-        <p class="text-3xl font-bold text-gray-900" id="held-text">$0.00</p>
-        <p class="text-sm text-gray-500 mt-1">Temporarily on hold</p>
-      </div>
-
-      <div class="card bg-gradient-to-br from-brand-700 to-brand-900 rounded-xl p-6 text-white">
-        <h3 class="text-sm font-medium text-blue-100 mb-2">Account Status</h3>
-        <p class="text-lg font-semibold" id="status-text">Active</p>
-        <p class="text-sm text-blue-100 mt-1">Member since <span id="member-since">-</span></p>
-        <a href="personal" class="inline-block mt-4 text-sm bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition">View Services</a>
-      </div>
+    <div class="bal-card secondary">
+      <div class="bal-label">Held Funds</div>
+      <div class="bal-amount" id="bal-held" style="color:#d97706">$0.00</div>
+      <div class="bal-sub">Pending release</div>
+      <div class="bal-icon">🔒</div>
     </div>
-
-    <h2 class="text-lg font-bold text-gray-900 mb-4">Recent Transactions</h2>
-    <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-8">
-      <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
-              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Type</th>
-              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Amount</th>
-              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Reason</th>
-              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
-            </tr>
-          </thead>
-          <tbody id="txns-body" class="bg-white divide-y divide-gray-200">
-          </tbody>
-        </table>
-      </div>
-      <div id="empty-txns" class="hidden text-center py-12 text-gray-500">No transactions yet</div>
+    <div class="bal-card secondary">
+      <div class="bal-label">Account Status</div>
+      <div class="bal-amount" id="bal-status" style="font-size:18px;margin-top:4px"></div>
+      <div class="bal-sub" id="bal-kyc"></div>
+      <div class="bal-icon">✅</div>
     </div>
+  </div>
 
-    <h2 class="text-lg font-bold text-gray-900 mb-4">Banking Services</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <a href="business" class="card bg-white rounded-xl border border-gray-100 p-5 hover:border-brand-300">
-        <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-3">
-          <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5"></path></svg>
-        </div>
-        <h3 class="font-semibold text-gray-900">Business</h3>
-        <p class="text-sm text-gray-500 mt-1">Solutions for companies</p>
-      </a>
-      <a href="personal" class="card bg-white rounded-xl border border-gray-100 p-5 hover:border-brand-300">
-        <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-3">
-          <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-        </div>
-        <h3 class="font-semibold text-gray-900">Personal</h3>
-        <p class="text-sm text-gray-500 mt-1">Accounts for individuals</p>
-      </a>
-      <a href="cards" class="card bg-white rounded-xl border border-gray-100 p-5 hover:border-brand-300">
-        <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-3">
-          <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
-        </div>
-        <h3 class="font-semibold text-gray-900">Credit Cards</h3>
-        <p class="text-sm text-gray-500 mt-1">Cards and rewards</p>
-      </a>
-      <a href="loans" class="card bg-white rounded-xl border border-gray-100 p-5 hover:border-brand-300">
-        <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-3">
-          <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        </div>
-        <h3 class="font-semibold text-gray-900">Loans</h3>
-        <p class="text-sm text-gray-500 mt-1">Apply for financing</p>
-      </a>
+  <!-- Quick actions -->
+  <div class="section-heading">Quick Actions</div>
+  <div class="actions-grid">
+    <div class="action-btn" onclick="openModal('modal-transfer')">
+      <div class="icon">📤</div>
+      <div class="label">Send Transfer</div>
+    </div>
+    <div class="action-btn" onclick="openModal('modal-loan')">
+      <div class="icon">💰</div>
+      <div class="label">Apply for Loan</div>
+    </div>
+    <div class="action-btn" onclick="openModal('modal-ticket')">
+      <div class="icon">🎫</div>
+      <div class="label">Support Ticket</div>
+    </div>
+    <div class="action-btn" onclick="loadSection('transfers')">
+      <div class="icon">📋</div>
+      <div class="label">My Transfers</div>
+    </div>
+    <div class="action-btn" onclick="loadSection('loans')">
+      <div class="icon">📑</div>
+      <div class="label">My Loans</div>
+    </div>
+    <div class="action-btn" onclick="loadSection('history')">
+      <div class="icon">📊</div>
+      <div class="label">Transactions</div>
+    </div>
+  </div>
+
+  <!-- Panels -->
+  <div class="panel" id="panel-history">
+    <div class="panel-header">
+      <h3>Recent Transactions</h3>
+      <button class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border:none;font-size:12px;font-weight:600;padding:6px 12px;border-radius:6px;cursor:pointer" onclick="loadSection('history')">View All</button>
+    </div>
+    <div id="txn-body"><div class="empty">Loading...</div></div>
+  </div>
+
+  <div class="panel" id="panel-transfers" style="display:none">
+    <div class="panel-header">
+      <h3>My Transfer Requests</h3>
+      <button class="btn btn-primary btn-sm" onclick="openModal('modal-transfer')">+ New Transfer</button>
+    </div>
+    <div class="overflow-x" id="transfers-body"><div class="empty">Loading...</div></div>
+  </div>
+
+  <div class="panel" id="panel-loans" style="display:none">
+    <div class="panel-header">
+      <h3>My Loan Applications</h3>
+      <button class="btn btn-primary btn-sm" onclick="openModal('modal-loan')">+ Apply for Loan</button>
+    </div>
+    <div class="overflow-x" id="loans-body"><div class="empty">Loading...</div></div>
+  </div>
+
+</div>
+
+<footer>&copy; 2025 MercurialVest Bank. All rights reserved.</footer>
+
+<!-- Transfer Modal -->
+<div class="modal-overlay" id="modal-transfer">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">📤 Send Transfer</div><button class="modal-close" onclick="closeModal('modal-transfer')">✕</button></div>
+    <div class="modal-body">
+      <div class="alert alert-err" id="tf-err"></div>
+      <div class="alert alert-ok" id="tf-ok"></div>
+      <p style="font-size:12px;color:#64748b;margin-bottom:14px;background:#fffbeb;padding:10px 12px;border-radius:8px;border:1px solid #fcd34d">⏳ Transfers require admin approval before processing.</p>
+      <div class="form-group"><label class="form-label">Recipient Full Name</label><input class="form-input" type="text" id="tf-name" placeholder="John Smith"></div>
+      <div class="form-group"><label class="form-label">Recipient Account Number</label><input class="form-input" type="text" id="tf-account" placeholder="Account / IBAN"></div>
+      <div class="form-group"><label class="form-label">Bank Name</label><input class="form-input" type="text" id="tf-bank" placeholder="Bank of America"></div>
+      <div class="form-group"><label class="form-label">Amount (USD)</label><input class="form-input" type="number" id="tf-amount" placeholder="0.00" min="0.01" step="0.01"></div>
+      <div class="form-group"><label class="form-label">Reason / Note</label><textarea class="form-textarea" id="tf-reason" placeholder="Purpose of transfer..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" style="background:#f1f5f9;color:#374151;border:none" onclick="closeModal('modal-transfer')">Cancel</button>
+      <button class="btn btn-primary" onclick="doTransfer()" id="tf-btn">Submit Request</button>
+    </div>
+  </div>
+</div>
+
+<!-- Loan Modal -->
+<div class="modal-overlay" id="modal-loan">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">💰 Apply for Loan</div><button class="modal-close" onclick="closeModal('modal-loan')">✕</button></div>
+    <div class="modal-body">
+      <div class="alert alert-err" id="ln-err"></div>
+      <div class="alert alert-ok" id="ln-ok"></div>
+      <div class="form-group"><label class="form-label">Loan Amount (USD)</label><input class="form-input" type="number" id="ln-amount" placeholder="0.00" min="100" step="0.01"></div>
+      <div class="form-group"><label class="form-label">Repayment Term</label>
+        <select class="form-select" id="ln-term">
+          <option value="6">6 months</option>
+          <option value="12" selected>12 months</option>
+          <option value="24">24 months</option>
+          <option value="36">36 months</option>
+          <option value="60">60 months</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Purpose</label><textarea class="form-textarea" id="ln-purpose" placeholder="What will you use this loan for?"></textarea></div>
+      <div class="form-group"><label class="form-label">Monthly Income (USD, optional)</label><input class="form-input" type="number" id="ln-income" placeholder="0.00" min="0" step="0.01"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" style="background:#f1f5f9;color:#374151;border:none" onclick="closeModal('modal-loan')">Cancel</button>
+      <button class="btn btn-primary" onclick="doLoan()" id="ln-btn">Submit Application</button>
+    </div>
+  </div>
+</div>
+
+<!-- Support Ticket Modal -->
+<div class="modal-overlay" id="modal-ticket">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">🎫 Support Ticket</div><button class="modal-close" onclick="closeModal('modal-ticket')">✕</button></div>
+    <div class="modal-body">
+      <div class="alert alert-err" id="tk-err"></div>
+      <div class="alert alert-ok" id="tk-ok"></div>
+      <div class="form-group"><label class="form-label">Category</label>
+        <select class="form-select" id="tk-category">
+          <option value="general">General</option>
+          <option value="billing">Billing</option>
+          <option value="account">Account</option>
+          <option value="technical">Technical</option>
+          <option value="fraud">Fraud / Security</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Subject</label><input class="form-input" type="text" id="tk-subject" placeholder="Brief description..."></div>
+      <div class="form-group"><label class="form-label">Message</label><textarea class="form-textarea" id="tk-message" style="min-height:100px" placeholder="Describe your issue in detail..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" style="background:#f1f5f9;color:#374151;border:none" onclick="closeModal('modal-ticket')">Cancel</button>
+      <button class="btn btn-primary" onclick="doTicket()" id="tk-btn">Submit Ticket</button>
     </div>
   </div>
 </div>
@@ -150,73 +293,117 @@
 const SUPA_URL = "https://uatnxwvkpuvxvgngxxez.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhdG54d3ZrcHV2eHZnbmd4eGV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1NjM1OTAsImV4cCI6MjEwMjEzOTU5MH0.l0X90PCIpX4OZoU1yTEpuh3Ro7ZqkP79KCFiH3RQ_lI";
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
-
-const fmt = (n) => "$" + parseFloat(n || 0).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+let userId = null;
 
 async function init() {
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) {
-    document.getElementById("loading").classList.add("hidden");
-    document.getElementById("auth-guard").classList.remove("hidden");
-    return;
-  }
+  if (!session) { window.location.replace('/login'); return; }
+  userId = session.user.id;
+  const { data: p } = await sb.from('profiles').select('*').eq('id', userId).single();
+  if (!p) { window.location.replace('/login'); return; }
+  if (p.status === 'inactive') { sb.auth.signOut(); window.location.replace('/login'); return; }
 
-  const user = session.user;
-  document.getElementById("user-email").textContent = user.email;
-  document.getElementById("welcome-text").textContent = "Welcome, " + (user.user_metadata?.full_name || user.email.split("@")[0]);
-
-  const { data: profile } = await sb.from("profiles").select("balance,held_funds,status,created_at,role").eq("id", user.id).single();
-  if (profile) {
-    document.getElementById("balance-text").textContent = fmt(profile.balance);
-    document.getElementById("held-text").textContent = fmt(profile.held_funds);
-    document.getElementById("status-text").textContent = (profile.status || "active").charAt(0).toUpperCase() + (profile.status || "active").slice(1);
-    document.getElementById("member-since").textContent = new Date(profile.created_at).toLocaleDateString();
-    if (profile.role === "admin") {
-      const adminCard = document.createElement("a");
-      adminCard.href = "admin";
-      adminCard.className = "card bg-white rounded-xl border border-gray-100 p-5 hover:border-brand-300";
-      adminCard.innerHTML = '<div class="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center mb-3"><svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg></div><h3 class="font-semibold text-gray-900">Admin Panel</h3><p class="text-sm text-gray-500 mt-1">Manage users & funds</p>';
-      document.querySelector(".grid-cols-1.sm\\:grid-cols-2.lg\\:grid-cols-4").appendChild(adminCard);
-    }
-  }
-
-  // Load transactions
-  const { data: txns } = await sb.from("transactions").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20);
-  const tbody = document.getElementById("txns-body");
-  if (!txns || txns.length === 0) {
-    document.getElementById("empty-txns").classList.remove("hidden");
-  } else {
-    txns.forEach(t => {
-      const tr = document.createElement("tr");
-      const typeClass = t.type === 'credit' ? 'txn-credit' : (t.type === 'hold' ? 'txn-hold' : 'txn-release');
-      const typeLabel = t.type === 'credit' ? 'Credit' : (t.type === 'hold' ? 'Hold' : 'Release');
-      const statusClass = t.status === 'active' ? 'text-amber-600 bg-amber-50' : (t.status === 'released' ? 'text-blue-600 bg-blue-50' : 'text-green-600 bg-green-50');
-      tr.innerHTML = `
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(t.created_at).toLocaleString()}</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${typeClass}">${typeLabel}</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${fmt(t.amount)}</td>
-        <td class="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">${t.reason || '-'}</td>
-        <td class="px-6 py-4 whitespace-nowrap"><span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">${t.status}</span></td>
-      `;
-      tbody.appendChild(tr);
-    });
-  }
-
-  document.getElementById("loading").classList.add("hidden");
-  document.getElementById("dashboard-content").classList.remove("hidden");
+  const name = p.full_name || p.email.split('@')[0];
+  document.getElementById('welcome-msg').textContent = 'Welcome back, ' + name + ' 👋';
+  document.getElementById('welcome-sub').textContent = 'Account: ' + (p.account_number || '—');
+  document.getElementById('nav-acct').textContent = p.account_number || '';
+  document.getElementById('bal-available').textContent = '$' + Number(p.balance||0).toLocaleString('en',{minimumFractionDigits:2});
+  document.getElementById('bal-held').textContent = '$' + Number(p.held_funds||0).toLocaleString('en',{minimumFractionDigits:2});
+  document.getElementById('bal-status').innerHTML = `<span class="badge badge-${p.status}">${p.status}</span>`;
+  document.getElementById('bal-kyc').textContent = 'KYC: ' + (p.kyc_status || 'unverified');
+  if ((p.kyc_status || 'unverified') === 'unverified') document.getElementById('kyc-alert').style.display = 'flex';
+  await loadTxns();
+  document.getElementById('loader').style.display = 'none';
 }
 
+async function loadTxns() {
+  const { data } = await sb.from('transactions').select('*').eq('user_id', userId).order('created_at',{ascending:false}).limit(20);
+  const el = document.getElementById('txn-body');
+  if (!data || !data.length) { el.innerHTML = '<div class="empty">No transactions yet.</div>'; return; }
+  el.innerHTML = '<div class="overflow-x"><table class="tbl"><thead><tr><th>Type</th><th>Amount</th><th>Reason</th><th>Status</th><th>Date</th></tr></thead><tbody>' +
+    data.map(t=>`<tr><td><span class="badge badge-${t.type}">${t.type}</span></td><td style="font-weight:700;color:${t.type==='credit'?'#16a34a':t.type==='hold'?'#d97706':'#1d4ed8'}">$${Number(t.amount).toFixed(2)}</td><td style="max-width:200px;white-space:normal">${t.reason||'—'}</td><td><span class="badge badge-${t.status}">${t.status}</span></td><td>${new Date(t.created_at).toLocaleDateString()}</td></tr>`).join('') +
+    '</tbody></table></div>';
+}
+
+async function loadSection(section) {
+  // hide all panels, show requested
+  document.getElementById('panel-history').style.display = section==='history'?'block':'none';
+  document.getElementById('panel-transfers').style.display = section==='transfers'?'block':'none';
+  document.getElementById('panel-loans').style.display = section==='loans'?'block':'none';
+  if (section === 'history') { await loadTxns(); document.getElementById('panel-history').style.display='block'; }
+  else if (section === 'transfers') {
+    const { data } = await sb.from('transfer_requests').select('*').eq('user_id', userId).order('created_at',{ascending:false});
+    const el = document.getElementById('transfers-body');
+    if (!data || !data.length) { el.innerHTML = '<div class="empty">No transfer requests yet.</div>'; return; }
+    el.innerHTML = '<table class="tbl"><thead><tr><th>Recipient</th><th>Bank</th><th>Amount</th><th>Reason</th><th>Status</th><th>Note</th><th>Date</th></tr></thead><tbody>' +
+      data.map(t=>`<tr><td><div style="font-weight:600">${t.recipient_name}</div><div style="font-size:11px;color:#94a3b8">${t.recipient_account}</div></td><td>${t.bank_name}</td><td style="font-weight:700">$${Number(t.amount).toFixed(2)}</td><td style="max-width:140px;white-space:normal;font-size:12px">${t.reason||'—'}</td><td><span class="badge badge-${t.status}">${t.status}</span></td><td style="max-width:140px;white-space:normal;font-size:12px;color:#64748b">${t.admin_note||'—'}</td><td>${new Date(t.created_at).toLocaleDateString()}</td></tr>`).join('') +
+      '</tbody></table>';
+  }
+  else if (section === 'loans') {
+    const { data } = await sb.from('loan_applications').select('*').eq('user_id', userId).order('created_at',{ascending:false});
+    const el = document.getElementById('loans-body');
+    if (!data || !data.length) { el.innerHTML = '<div class="empty">No loan applications yet.</div>'; return; }
+    el.innerHTML = '<table class="tbl"><thead><tr><th>Amount</th><th>Term</th><th>Purpose</th><th>Status</th><th>Admin Note</th><th>Date</th></tr></thead><tbody>' +
+      data.map(l=>`<tr><td style="font-weight:700">$${Number(l.amount).toFixed(2)}</td><td>${l.term_months} mo</td><td style="max-width:160px;white-space:normal">${l.purpose}</td><td><span class="badge badge-${l.status}">${l.status}</span></td><td style="max-width:160px;white-space:normal;font-size:12px;color:#64748b">${l.admin_note||'—'}</td><td>${new Date(l.created_at).toLocaleDateString()}</td></tr>`).join('') +
+      '</tbody></table>';
+  }
+}
+
+async function doTransfer() {
+  const name=document.getElementById('tf-name').value.trim();
+  const account=document.getElementById('tf-account').value.trim();
+  const bank=document.getElementById('tf-bank').value.trim();
+  const amount=parseFloat(document.getElementById('tf-amount').value);
+  const reason=document.getElementById('tf-reason').value.trim();
+  if(!name||!account||!bank){showAlert('tf-err','Please fill in all recipient details');return;}
+  if(!amount||amount<=0){showAlert('tf-err','Enter a valid amount');return;}
+  setLoading('tf-btn',true,'Submitting...');
+  const {error}=await sb.from('transfer_requests').insert({user_id:userId,amount,recipient_name:name,recipient_account:account,bank_name:bank,reason});
+  setLoading('tf-btn',false,'Submit Request');
+  if(error){showAlert('tf-err',error.message);return;}
+  showAlert('tf-ok','Transfer request submitted! Awaiting admin approval.');
+  document.getElementById('tf-name').value=''; document.getElementById('tf-account').value='';
+  document.getElementById('tf-bank').value=''; document.getElementById('tf-amount').value=''; document.getElementById('tf-reason').value='';
+  setTimeout(()=>closeModal('modal-transfer'),2500);
+}
+
+async function doLoan() {
+  const amount=parseFloat(document.getElementById('ln-amount').value);
+  const term=parseInt(document.getElementById('ln-term').value);
+  const purpose=document.getElementById('ln-purpose').value.trim();
+  const income=parseFloat(document.getElementById('ln-income').value)||null;
+  if(!amount||amount<100){showAlert('ln-err','Minimum loan amount is $100');return;}
+  if(!purpose){showAlert('ln-err','Please describe the purpose of the loan');return;}
+  setLoading('ln-btn',true,'Submitting...');
+  const {error}=await sb.from('loan_applications').insert({user_id:userId,amount,term_months:term,purpose,monthly_income:income});
+  setLoading('ln-btn',false,'Submit Application');
+  if(error){showAlert('ln-err',error.message);return;}
+  showAlert('ln-ok','Loan application submitted! We will review it shortly.');
+  setTimeout(()=>closeModal('modal-loan'),2500);
+}
+
+async function doTicket() {
+  const category=document.getElementById('tk-category').value;
+  const subject=document.getElementById('tk-subject').value.trim();
+  const message=document.getElementById('tk-message').value.trim();
+  if(!subject){showAlert('tk-err','Please enter a subject');return;}
+  if(!message){showAlert('tk-err','Please describe your issue');return;}
+  setLoading('tk-btn',true,'Submitting...');
+  const {error}=await sb.from('support_tickets').insert({user_id:userId,category,subject,message});
+  setLoading('tk-btn',false,'Submit Ticket');
+  if(error){showAlert('tk-err',error.message);return;}
+  showAlert('tk-ok','Support ticket created! We\'ll respond shortly.');
+  setTimeout(()=>closeModal('modal-ticket'),2500);
+}
+
+function openModal(id){document.getElementById(id).classList.add('open');document.body.style.overflow='hidden'}
+function closeModal(id){document.getElementById(id).classList.remove('open');document.body.style.overflow=''}
+function showAlert(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display='block';setTimeout(()=>el.style.display='none',5000)}
+function setLoading(id,loading,text){const b=document.getElementById(id);if(b){b.disabled=loading;b.textContent=text}}
+function doLogout(){sb.auth.signOut().then(()=>window.location.replace('/login'))}
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)closeModal(o.id)}));
+
 init();
-
-document.getElementById("logout-btn").addEventListener("click", async () => {
-  await sb.auth.signOut();
-  window.location.href = "login";
-});
-
-sb.auth.onAuthStateChange((event) => {
-  if (event === "SIGNED_OUT") window.location.href = "login";
-});
 </script>
-
 </body>
 </html>
