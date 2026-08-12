@@ -26,11 +26,15 @@
     @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
     .badge-active{background:#dcfce7;color:#166534}
     .badge-inactive{background:#fee2e2;color:#991b1b}
+    .modal-bg{background:rgba(0,0,0,.5)}
+    .card{transition:transform .2s,box-shadow .2s}
+    .card:hover{transform:translateY(-1px)}
+    .hidden{display:none !important}
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
 
-<nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
+<nav class="bg-white border-b border-gray-200 sticky top-0 z-40">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex justify-between h-16 items-center">
       <a href="/" class="flex items-center gap-2">
@@ -68,7 +72,7 @@
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
       <div>
         <h1 class="text-2xl font-bold text-gray-900">User Management</h1>
-        <p class="text-gray-600 text-sm mt-1">View and manage registered users</p>
+        <p class="text-gray-600 text-sm mt-1">Manage users, accounts, and funds</p>
       </div>
       <div class="flex gap-3">
         <button id="refresh-btn" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg transition">Refresh</button>
@@ -84,8 +88,9 @@
               <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
               <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
               <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Joined</th>
-              <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Balance</th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Held</th>
+              <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody id="users-body" class="bg-white divide-y divide-gray-200">
@@ -97,11 +102,103 @@
   </div>
 </div>
 
+<!-- Fund Modal -->
+<div id="fund-modal" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg p-4">
+  <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+    <h3 class="text-lg font-bold text-gray-900 mb-2">Fund User</h3>
+    <p class="text-sm text-gray-600 mb-4" id="fund-user-label">Add credit to user account.</p>
+    <form id="fund-form">
+      <input type="hidden" id="fund-user-id">
+      <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+      <div class="relative mb-4">
+        <span class="absolute left-3 top-2.5 text-gray-500">$</span>
+        <input type="number" id="fund-amount" step="0.01" min="0.01" required class="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-600 focus:border-brand-600">
+      </div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+      <input type="text" id="fund-reason" placeholder="e.g. Welcome bonus" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-600 focus:border-brand-600 mb-6">
+      <div class="flex justify-end gap-3">
+        <button type="button" class="close-modal px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+        <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-brand-700 rounded-lg hover:bg-brand-800">Add Funds</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Hold Modal -->
+<div id="hold-modal" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg p-4">
+  <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+    <h3 class="text-lg font-bold text-gray-900 mb-2">Hold Funds</h3>
+    <p class="text-sm text-gray-600 mb-4" id="hold-user-label">Place a hold on user's available balance.</p>
+    <form id="hold-form">
+      <input type="hidden" id="hold-user-id">
+      <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+      <div class="relative mb-4">
+        <span class="absolute left-3 top-2.5 text-gray-500">$</span>
+        <input type="number" id="hold-amount" step="0.01" min="0.01" required class="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-600 focus:border-brand-600">
+      </div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Reason for hold</label>
+      <input type="text" id="hold-reason" placeholder="e.g. Pending verification" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-600 focus:border-brand-600 mb-6">
+      <div class="flex justify-end gap-3">
+        <button type="button" class="close-modal px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+        <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700">Place Hold</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Release Modal -->
+<div id="release-modal" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg p-4">
+  <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+    <h3 class="text-lg font-bold text-gray-900 mb-2">Release Hold</h3>
+    <p class="text-sm text-gray-600 mb-4">Select an active hold to release back to user balance.</p>
+    <form id="release-form">
+      <input type="hidden" id="release-user-id">
+      <label class="block text-sm font-medium text-gray-700 mb-1">Active Hold</label>
+      <select id="release-hold-id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-600 focus:border-brand-600 mb-6">
+        <option value="">Select a hold...</option>
+      </select>
+      <div class="flex justify-end gap-3">
+        <button type="button" class="close-modal px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+        <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">Release Hold</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Transactions Modal -->
+<div id="txns-modal" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg p-4">
+  <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-bold text-gray-900">Transaction History</h3>
+      <button class="close-modal text-gray-400 hover:text-gray-600">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
+            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Type</th>
+            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Amount</th>
+            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Reason</th>
+            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+          </tr>
+        </thead>
+        <tbody id="txns-modal-body" class="divide-y divide-gray-200">
+        </tbody>
+      </table>
+      <div id="txns-modal-empty" class="hidden text-center py-8 text-gray-500">No transactions</div>
+    </div>
+  </div>
+</div>
+
 <script>
 const SUPA_URL = "https://uatnxwvkpuvxvgngxxez.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhdG54d3ZrcHV2eHZnbmd4eGV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1NjM1OTAsImV4cCI6MjEwMjEzOTU5MH0.l0X90PCIpX4OZoU1yTEpuh3Ro7ZqkP79KCFiH3RQ_lI";
 const supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 
+const fmt = (n) => "$" + parseFloat(n || 0).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const loading = document.getElementById("loading");
 const accessDenied = document.getElementById("access-denied");
 const adminContent = document.getElementById("admin-content");
@@ -109,6 +206,26 @@ const usersBody = document.getElementById("users-body");
 const emptyState = document.getElementById("empty-state");
 
 let currentUserId = null;
+
+function showModal(id) {
+  const el = document.getElementById(id);
+  el.classList.remove("hidden");
+  el.classList.add("flex");
+}
+function hideModal(id) {
+  const el = document.getElementById(id);
+  el.classList.add("hidden");
+  el.classList.remove("flex");
+}
+
+document.querySelectorAll(".close-modal").forEach(btn => {
+  btn.addEventListener("click", () => {
+    hideModal("fund-modal");
+    hideModal("hold-modal");
+    hideModal("release-modal");
+    hideModal("txns-modal");
+  });
+});
 
 async function init() {
   const { data: { session } } = await supabase.auth.getSession();
@@ -131,12 +248,10 @@ async function init() {
 }
 
 async function loadUsers() {
-  usersBody.innerHTML = '';
-  // Use security definer function for admin full access
-  const { data: users, error } = await supabase.rpc('get_all_profiles');
+  usersBody.innerHTML = "";
+  const { data: users, error } = await supabase.rpc("get_all_profiles");
   if (error) {
-    console.error(error);
-    usersBody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-red-600">Failed to load users: ' + error.message + '</td></tr>';
+    usersBody.innerHTML = '<tr><td colspan="7" class="px-6 py-4 text-red-600">Failed to load users: ' + error.message + "</td></tr>";
     return;
   }
   if (!users || users.length === 0) {
@@ -150,36 +265,136 @@ async function loadUsers() {
     const isSelf = u.id === currentUserId;
     const roleClass = u.role === "admin" ? "text-purple-700 bg-purple-50" : "text-gray-600 bg-gray-100";
     const statusClass = u.status === "active" ? "badge-active" : "badge-inactive";
-    const btnText = u.status === "active" ? "Deactivate" : "Activate";
-    const btnClass = u.status === "active" ? "text-red-600 hover:text-red-800" : "text-green-600 hover:text-green-800";
+    const activeBtn = u.status === "active" ? "Deactivate" : "Activate";
+    const activeBtnClass = u.status === "active" ? "text-red-600 hover:text-red-800" : "text-green-600 hover:text-green-800";
     tr.innerHTML = `
       <td class="px-6 py-4 whitespace-nowrap">
-        <div class="text-sm font-medium text-gray-900">${u.full_name || '—'}</div>
+        <div class="text-sm font-medium text-gray-900">${u.full_name || "—"}</div>
+        <div class="text-xs text-gray-500">${new Date(u.created_at).toLocaleDateString()}</div>
       </td>
       <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${u.email}</td>
       <td class="px-6 py-4 whitespace-nowrap"><span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${roleClass}">${u.role}</span></td>
       <td class="px-6 py-4 whitespace-nowrap"><span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">${u.status}</span></td>
-      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(u.created_at).toLocaleDateString()}</td>
+      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${fmt(u.balance)}</td>
+      <td class="px-6 py-4 whitespace-nowrap text-sm text-amber-600">${fmt(u.held_funds)}</td>
       <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-        ${isSelf ? '<span class="text-gray-400">You</span>' : `<button class="${btnClass} toggle-status" data-id="${u.id}" data-status="${u.status}">${btnText}</button>`}
+        <div class="flex flex-col sm:flex-row gap-2 justify-end">
+          ${isSelf ? "" : `<button class="fund-btn text-brand-600 hover:text-brand-800" data-id="${u.id}" data-email="${u.email}">Fund</button>`}
+          ${isSelf ? "" : `<button class="hold-btn text-amber-600 hover:text-amber-800" data-id="${u.id}" data-email="${u.email}">Hold</button>`}
+          <button class="release-btn text-blue-600 hover:text-blue-800" data-id="${u.id}" data-email="${u.email}">Release</button>
+          <button class="txns-btn text-gray-600 hover:text-gray-800" data-id="${u.id}" data-email="${u.email}">Txns</button>
+          ${isSelf ? "" : `<button class="toggle-status ${activeBtnClass}" data-id="${u.id}" data-status="${u.status}">${activeBtn}</button>`}
+        </div>
       </td>
     `;
     usersBody.appendChild(tr);
   });
 
+  bindActions();
+}
+
+function bindActions() {
   document.querySelectorAll(".toggle-status").forEach(btn => {
     btn.addEventListener("click", async () => {
-      const id = btn.dataset.id;
       const newStatus = btn.dataset.status === "active" ? "inactive" : "active";
-      const { error } = await supabase.rpc('update_user_status', { target_id: id, new_status: newStatus });
-      if (error) {
-        alert("Failed to update status: " + error.message);
-      } else {
-        await loadUsers();
-      }
+      const { error } = await supabase.rpc("update_user_status", { target_id: btn.dataset.id, new_status: newStatus });
+      if (error) alert("Failed: " + error.message);
+      else await loadUsers();
+    });
+  });
+
+  document.querySelectorAll(".fund-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById("fund-user-id").value = btn.dataset.id;
+      document.getElementById("fund-user-label").textContent = "Add credit to " + btn.dataset.email;
+      document.getElementById("fund-amount").value = "";
+      document.getElementById("fund-reason").value = "";
+      showModal("fund-modal");
+    });
+  });
+
+  document.querySelectorAll(".hold-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById("hold-user-id").value = btn.dataset.id;
+      document.getElementById("hold-user-label").textContent = "Place a hold on " + btn.dataset.email + "'s available balance.";
+      document.getElementById("hold-amount").value = "";
+      document.getElementById("hold-reason").value = "";
+      showModal("hold-modal");
+    });
+  });
+
+  document.querySelectorAll(".release-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const userId = btn.dataset.id;
+      document.getElementById("release-user-id").value = userId;
+      const select = document.getElementById("release-hold-id");
+      select.innerHTML = '<option value="">Loading...</option>';
+      showModal("release-modal");
+      const { data, error } = await supabase.from("transactions").select("id,amount,reason,created_at")
+        .eq("user_id", userId).eq("type", "hold").eq("status", "active").order("created_at", { ascending: false });
+      if (error) { select.innerHTML = '<option value="">Error loading holds</option>'; return; }
+      if (!data || data.length === 0) { select.innerHTML = '<option value="">No active holds</option>'; return; }
+      select.innerHTML = data.map(h => `<option value="${h.id}">${fmt(h.amount)} — ${h.reason} (${new Date(h.created_at).toLocaleDateString()})</option>`).join("");
+    });
+  });
+
+  document.querySelectorAll(".txns-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const userId = btn.dataset.id;
+      const tbody = document.getElementById("txns-modal-body");
+      const empty = document.getElementById("txns-modal-empty");
+      tbody.innerHTML = "";
+      showModal("txns-modal");
+      const { data, error } = await supabase.rpc("admin_user_transactions", { target_id: userId });
+      if (error) { tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-red-600">Error: ' + error.message + "</td></tr>"; return; }
+      if (!data || data.length === 0) { empty.classList.remove("hidden"); return; }
+      empty.classList.add("hidden");
+      data.forEach(t => {
+        const tr = document.createElement("tr");
+        const typeColor = t.type === "credit" ? "text-green-600" : (t.type === "hold" ? "text-red-600" : "text-blue-600");
+        tr.innerHTML = `
+          <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${new Date(t.created_at).toLocaleString()}</td>
+          <td class="px-4 py-2 whitespace-nowrap text-sm font-medium ${typeColor}">${t.type}</td>
+          <td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">${fmt(t.amount)}</td>
+          <td class="px-4 py-2 text-sm text-gray-600 max-w-xs truncate">${t.reason || "-"}</td>
+          <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${t.status}</td>
+        `;
+        tbody.appendChild(tr);
+      });
     });
   });
 }
+
+document.getElementById("fund-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const userId = document.getElementById("fund-user-id").value;
+  const amount = parseFloat(document.getElementById("fund-amount").value);
+  const reason = document.getElementById("fund-reason").value.trim();
+  if (!amount || amount <= 0) { alert("Enter a positive amount"); return; }
+  const { error } = await supabase.rpc("admin_credit_user", { target_id: userId, amount: amount, reason: reason });
+  if (error) alert("Failed to fund: " + error.message);
+  else { hideModal("fund-modal"); await loadUsers(); }
+});
+
+document.getElementById("hold-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const userId = document.getElementById("hold-user-id").value;
+  const amount = parseFloat(document.getElementById("hold-amount").value);
+  const reason = document.getElementById("hold-reason").value.trim();
+  if (!amount || amount <= 0) { alert("Enter a positive amount"); return; }
+  const { error } = await supabase.rpc("admin_hold_funds", { target_id: userId, amount: amount, reason: reason });
+  if (error) alert("Failed to hold: " + error.message);
+  else { hideModal("hold-modal"); await loadUsers(); }
+});
+
+document.getElementById("release-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const holdId = document.getElementById("release-hold-id").value;
+  if (!holdId) { alert("Select a hold to release"); return; }
+  const { error } = await supabase.rpc("admin_release_hold", { hold_transaction_id: holdId });
+  if (error) alert("Failed to release: " + error.message);
+  else { hideModal("release-modal"); await loadUsers(); }
+});
 
 document.getElementById("refresh-btn").addEventListener("click", loadUsers);
 document.getElementById("logout-btn").addEventListener("click", async () => {

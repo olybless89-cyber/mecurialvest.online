@@ -24,14 +24,15 @@
   <style>
     .loader{border:3px solid #f3f4f6;border-top:3px solid #2563eb;border-radius:50%;width:28px;height:28px;animation:spin 1s linear infinite}
     @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
-    .nav-link{color:#64748b;transition:.15s}.nav-link:hover{color:#2563eb}
     .card{transition:transform .2s,box-shadow .2s}
     .card:hover{transform:translateY(-2px);box-shadow:0 10px 25px -5px rgba(0,0,0,.1)}
+    .txn-credit{color:#16a34a}
+    .txn-hold{color:#dc2626}
+    .txn-release{color:#2563eb}
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
 
-<!-- Top nav -->
 <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex justify-between h-16 items-center">
@@ -55,19 +56,16 @@
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-  <!-- Loading -->
   <div id="loading" class="flex justify-center py-20">
     <div class="loader"></div>
   </div>
 
-  <!-- Auth guard message -->
   <div id="auth-guard" class="hidden text-center py-20">
     <h1 class="text-2xl font-bold text-gray-900">Please sign in</h1>
     <p class="text-gray-600 mt-2">You need to be logged in to view your dashboard.</p>
     <a href="login" class="inline-block mt-6 bg-brand-700 hover:bg-brand-800 text-white font-medium px-6 py-3 rounded-lg">Go to Login</a>
   </div>
 
-  <!-- Dashboard content -->
   <div id="dashboard-content" class="hidden">
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-gray-900" id="welcome-text">Welcome</h1>
@@ -77,28 +75,48 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       <div class="card bg-white rounded-xl border border-gray-100 p-6">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-medium text-gray-500">Account Status</h3>
+          <h3 class="text-sm font-medium text-gray-500">Available Balance</h3>
           <span class="h-2 w-2 rounded-full bg-green-500"></span>
         </div>
-        <p class="text-2xl font-bold text-gray-900" id="status-text">Active</p>
-        <p class="text-sm text-gray-500 mt-1">Member since <span id="member-since">-</span></p>
+        <p class="text-3xl font-bold text-gray-900" id="balance-text">$0.00</p>
+        <p class="text-sm text-gray-500 mt-1">Funds available for use</p>
       </div>
 
       <div class="card bg-white rounded-xl border border-gray-100 p-6">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-medium text-gray-500">Account Type</h3>
-          <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+          <h3 class="text-sm font-medium text-gray-500">Held Funds</h3>
+          <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
         </div>
-        <p class="text-2xl font-bold text-gray-900">Personal</p>
-        <p class="text-sm text-gray-500 mt-1">Digital banking account</p>
+        <p class="text-3xl font-bold text-gray-900" id="held-text">$0.00</p>
+        <p class="text-sm text-gray-500 mt-1">Temporarily on hold</p>
       </div>
 
       <div class="card bg-gradient-to-br from-brand-700 to-brand-900 rounded-xl p-6 text-white">
-        <h3 class="text-sm font-medium text-blue-100 mb-2">Quick Access</h3>
-        <p class="text-lg font-semibold">Online Banking</p>
-        <p class="text-sm text-blue-100 mt-1">24/7 secure access</p>
+        <h3 class="text-sm font-medium text-blue-100 mb-2">Account Status</h3>
+        <p class="text-lg font-semibold" id="status-text">Active</p>
+        <p class="text-sm text-blue-100 mt-1">Member since <span id="member-since">-</span></p>
         <a href="personal" class="inline-block mt-4 text-sm bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition">View Services</a>
       </div>
+    </div>
+
+    <h2 class="text-lg font-bold text-gray-900 mb-4">Recent Transactions</h2>
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-8">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Type</th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Amount</th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Reason</th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+            </tr>
+          </thead>
+          <tbody id="txns-body" class="bg-white divide-y divide-gray-200">
+          </tbody>
+        </table>
+      </div>
+      <div id="empty-txns" class="hidden text-center py-12 text-gray-500">No transactions yet</div>
     </div>
 
     <h2 class="text-lg font-bold text-gray-900 mb-4">Banking Services</h2>
@@ -140,42 +158,59 @@ const SUPA_URL = "https://uatnxwvkpuvxvgngxxez.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhdG54d3ZrcHV2eHZnbmd4eGV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1NjM1OTAsImV4cCI6MjEwMjEzOTU5MH0.l0X90PCIpX4OZoU1yTEpuh3Ro7ZqkP79KCFiH3RQ_lI";
 const supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 
-const loading = document.getElementById("loading");
-const authGuard = document.getElementById("auth-guard");
-const dashboardContent = document.getElementById("dashboard-content");
-const welcomeText = document.getElementById("welcome-text");
-const userEmail = document.getElementById("user-email");
-const statusText = document.getElementById("status-text");
-const memberSince = document.getElementById("member-since");
+const fmt = (n) => "$" + parseFloat(n || 0).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
 async function init() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
-    loading.classList.add("hidden");
-    authGuard.classList.remove("hidden");
+    document.getElementById("loading").classList.add("hidden");
+    document.getElementById("auth-guard").classList.remove("hidden");
     return;
   }
 
   const user = session.user;
-  userEmail.textContent = user.email;
-  welcomeText.textContent = "Welcome, " + (user.user_metadata?.full_name || user.email.split("@")[0]);
+  document.getElementById("user-email").textContent = user.email;
+  document.getElementById("welcome-text").textContent = "Welcome, " + (user.user_metadata?.full_name || user.email.split("@")[0]);
 
-  const { data: profile } = await supabase.from("profiles").select("status,created_at,role").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("profiles").select("balance,held_funds,status,created_at,role").eq("id", user.id).single();
   if (profile) {
-    statusText.textContent = profile.status?.charAt(0).toUpperCase() + profile.status?.slice(1);
-    memberSince.textContent = new Date(profile.created_at).toLocaleDateString();
+    document.getElementById("balance-text").textContent = fmt(profile.balance);
+    document.getElementById("held-text").textContent = fmt(profile.held_funds);
+    document.getElementById("status-text").textContent = (profile.status || "active").charAt(0).toUpperCase() + (profile.status || "active").slice(1);
+    document.getElementById("member-since").textContent = new Date(profile.created_at).toLocaleDateString();
     if (profile.role === "admin") {
-      // Add admin quick link
       const adminCard = document.createElement("a");
       adminCard.href = "admin";
       adminCard.className = "card bg-white rounded-xl border border-gray-100 p-5 hover:border-brand-300";
-      adminCard.innerHTML = '<div class="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center mb-3"><svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg></div><h3 class="font-semibold text-gray-900">Admin Panel</h3><p class="text-sm text-gray-500 mt-1">Manage users</p>';
-      document.querySelector(".grid-cols-1.sm\:grid-cols-2.lg\:grid-cols-4").appendChild(adminCard);
+      adminCard.innerHTML = '<div class="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center mb-3"><svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg></div><h3 class="font-semibold text-gray-900">Admin Panel</h3><p class="text-sm text-gray-500 mt-1">Manage users & funds</p>';
+      document.querySelector(".grid-cols-1.sm\\:grid-cols-2.lg\\:grid-cols-4").appendChild(adminCard);
     }
   }
 
-  loading.classList.add("hidden");
-  dashboardContent.classList.remove("hidden");
+  // Load transactions
+  const { data: txns } = await supabase.from("transactions").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20);
+  const tbody = document.getElementById("txns-body");
+  if (!txns || txns.length === 0) {
+    document.getElementById("empty-txns").classList.remove("hidden");
+  } else {
+    txns.forEach(t => {
+      const tr = document.createElement("tr");
+      const typeClass = t.type === 'credit' ? 'txn-credit' : (t.type === 'hold' ? 'txn-hold' : 'txn-release');
+      const typeLabel = t.type === 'credit' ? 'Credit' : (t.type === 'hold' ? 'Hold' : 'Release');
+      const statusClass = t.status === 'active' ? 'text-amber-600 bg-amber-50' : (t.status === 'released' ? 'text-blue-600 bg-blue-50' : 'text-green-600 bg-green-50');
+      tr.innerHTML = `
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(t.created_at).toLocaleString()}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${typeClass}">${typeLabel}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${fmt(t.amount)}</td>
+        <td class="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">${t.reason || '-'}</td>
+        <td class="px-6 py-4 whitespace-nowrap"><span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">${t.status}</span></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  document.getElementById("loading").classList.add("hidden");
+  document.getElementById("dashboard-content").classList.remove("hidden");
 }
 
 init();
@@ -185,8 +220,7 @@ document.getElementById("logout-btn").addEventListener("click", async () => {
   window.location.href = "login";
 });
 
-// Realtime auth listener
-supabase.auth.onAuthStateChange((event, session) => {
+supabase.auth.onAuthStateChange((event) => {
   if (event === "SIGNED_OUT") window.location.href = "login";
 });
 </script>
