@@ -2,14 +2,26 @@
   "version": 2,
   "builds": [
     {
-      "src": "public/router.php",
+      "src": "index.php",
       "use": "@vercel/php"
     }
   ],
   "routes": [
     {
+      "src": "/temp/(.*)",
+      "dest": "/temp/$1"
+    },
+    {
+      "src": "/storage/(.*)",
+      "dest": "/storage/$1"
+    },
+    {
+      "src": "/(.*\\.css|.*\\.js|.*\\.png|.*\\.jpg|.*\\.gif|.*\\.svg|.*\\.ico|.*\\.woff|.*\\.woff2|.*\\.ttf)",
+      "dest": "/$1"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/public/router.php"
+      "dest": "/index.php"
     }
   ]
 }
