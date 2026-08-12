@@ -102,18 +102,10 @@ function showErr(msg) {
   btn.textContent = "Sign In";
 }
 
-// Redirect if already logged in
-sb.auth.getSession().then(function(r) {
-  if (r.data && r.data.session) {
-    overlay.style.display = "flex";
-    sb.from("profiles").select("role,status")
-      .eq("id", r.data.session.user.id).single()
-      .then(function(p) {
-        window.location.replace(
-          (p.data && p.data.role === "admin") ? "/admin" : "/dashboard"
-        );
-      });
-  }
+// On login page: always sign out any existing session first
+// so an admin can log in even if a user was previously logged in
+sb.auth.signOut().then(function() {
+  // Page is fresh, nothing to redirect
 });
 
 function doLogin(e) {

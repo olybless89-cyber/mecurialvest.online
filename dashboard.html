@@ -3,217 +3,536 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Dashboard — MercurialVest</title>
+  <title>Dashboard — MercurialVest Bank</title>
   <link rel="icon" type="image/svg+xml" href="storage/app/public/photos/favicon.svg">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',sans-serif;background:#f0f4f8;color:#1e293b;min-height:100vh;display:flex;flex-direction:column}
-/* Navbar */
-.navbar{background:#0f2356;padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
-.navbar a{color:#fff;text-decoration:none}
-.navbar .nav-links{display:flex;gap:20px;align-items:center;font-size:14px}
-.navbar .nav-links a:hover{color:#93c5fd}
-.logout-btn{background:#1e3a8a;color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
-.logout-btn:hover{background:#2563eb}
-/* Layout */
-.page{flex:1;max-width:1100px;margin:0 auto;width:100%;padding:32px 20px}
-@media(max-width:600px){.page{padding:20px 14px}}
-/* Welcome */
-.welcome{margin-bottom:28px}
-.welcome h1{font-size:24px;font-weight:800;color:#0f2356}
-.welcome p{font-size:14px;color:#64748b;margin-top:4px}
-/* Balance cards */
-.balance-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:28px}
-.bal-card{border-radius:14px;padding:22px;position:relative;overflow:hidden}
-.bal-card.primary{background:linear-gradient(135deg,#0f2356,#1d4ed8);color:#fff}
-.bal-card.secondary{background:#fff;border:1.5px solid #e2e8f0;color:#1e293b}
-.bal-label{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:.7;margin-bottom:8px}
-.bal-amount{font-size:30px;font-weight:800;line-height:1}
-.bal-card.primary .bal-amount{color:#fff}
-.bal-card.secondary .bal-amount{color:#0f2356}
-.bal-sub{font-size:12px;opacity:.6;margin-top:6px}
-.bal-icon{position:absolute;right:18px;top:18px;font-size:26px;opacity:.2}
-/* Quick actions */
-.section-heading{font-size:15px;font-weight:700;color:#0f2356;margin-bottom:14px}
-.actions-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:28px}
-.action-btn{background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:18px 14px;text-align:center;cursor:pointer;transition:.2s;text-decoration:none;color:#1e293b}
-.action-btn:hover{border-color:#2563eb;background:#eff6ff;transform:translateY(-2px);box-shadow:0 4px 12px rgba(37,99,235,.12)}
-.action-btn .icon{font-size:26px;margin-bottom:8px}
-.action-btn .label{font-size:12px;font-weight:600;color:#374151}
-/* Panels */
-.panel{background:#fff;border:1.5px solid #e2e8f0;border-radius:14px;overflow:hidden;margin-bottom:24px}
-.panel-header{padding:16px 20px;border-bottom:1.5px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
-.panel-header h3{font-size:14px;font-weight:700;color:#0f2356}
-.panel-body{padding:16px 20px}
-/* Table */
-.tbl{width:100%;border-collapse:collapse;min-width:500px}
-.tbl th{padding:10px 12px;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#94a3b8;border-bottom:1px solid #f1f5f9;text-align:left;white-space:nowrap}
-.tbl td{padding:12px 12px;font-size:13px;color:#64748b;border-bottom:1px solid #f8fafc;white-space:nowrap}
+:root{
+  --navy:#0f2356;--navy2:#1a3068;--blue:#2563eb;--blue-light:#3b82f6;
+  --bg:#f4f6fb;--sidebar-w:230px;--white:#fff;
+  --text:#1e293b;--muted:#64748b;--border:#e2e8f0;
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+
+/* ── SIDEBAR ── */
+.sidebar{width:var(--sidebar-w);background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:200;overflow-y:auto;transition:transform .25s}
+.sidebar-logo{padding:22px 20px 18px;text-align:center;border-bottom:1px solid var(--border)}
+.sidebar-logo-text{font-size:16px;font-weight:800;color:var(--navy);letter-spacing:.5px;line-height:1.1}
+.sidebar-user{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--blue),#7c3aed);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#fff;flex-shrink:0}
+.avatar-sm{width:32px;height:32px;font-size:12px}
+.user-name{font-size:13px;font-weight:700;color:var(--navy)}
+.user-id{font-size:11px;color:var(--muted)}
+.kyc-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#ef4444;margin-top:4px;cursor:pointer;background:#fef2f2;padding:3px 8px;border-radius:20px;border:none;width:fit-content}
+.kyc-badge.verified{color:#16a34a;background:#f0fdf4}
+.sidebar-nav{flex:1;padding:12px 0}
+.nav-section{padding:10px 18px 4px;font-size:10px;font-weight:700;letter-spacing:1.5px;color:#94a3b8;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 18px;cursor:pointer;color:var(--muted);font-size:13px;font-weight:500;border-radius:0;transition:.15s;text-decoration:none;border-left:3px solid transparent}
+.nav-item:hover{background:#f1f5f9;color:var(--navy)}
+.nav-item.active{background:#eff6ff;color:var(--blue);border-left-color:var(--blue);font-weight:600}
+.nav-item svg{flex-shrink:0;opacity:.6;width:16px;height:16px}
+.nav-item.active svg{opacity:1}
+.sidebar-bottom{padding:14px 18px;border-top:1px solid var(--border);display:flex;gap:8px}
+.btn-sm-outline{flex:1;padding:8px 0;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;color:var(--muted);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;text-decoration:none;transition:.15s}
+.btn-sm-outline:hover{border-color:var(--blue);color:var(--blue)}
+.btn-sm-logout{flex:1;padding:8px 0;border:1.5px solid #fee2e2;border-radius:8px;font-size:12px;font-weight:600;color:#ef4444;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:.15s}
+.btn-sm-logout:hover{background:#fef2f2}
+.secure-badge{padding:10px 18px;font-size:11px;color:#94a3b8;display:flex;align-items:center;justify-content:space-between}
+@media(max-width:900px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.main{margin-left:0!important}}
+
+/* ── MAIN ── */
+.main{flex:1;margin-left:var(--sidebar-w);display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.topbar-left{display:flex;align-items:center;gap:14px}
+.hamburger{display:none;background:transparent;border:1px solid var(--border);border-radius:8px;width:36px;height:36px;cursor:pointer;align-items:center;justify-content:center}
+@media(max-width:900px){.hamburger{display:flex}}
+.date-display{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.balance-pill{background:var(--blue);color:#fff;padding:8px 16px;border-radius:24px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+.notif-btn{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:.15s}
+.notif-btn:hover{border-color:var(--blue);color:var(--blue)}
+
+/* ── PAGE ── */
+.page-content{flex:1;padding:24px 28px;overflow-y:auto}
+@media(max-width:600px){.page-content{padding:16px}}
+.section{display:none}.section.active{display:block}
+
+/* ── Stats row ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
+@media(max-width:1100px){.stats-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.stats-row{grid-template-columns:1fr 1fr}}
+.stat-mini{background:var(--white);border:1.5px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;transition:.2s}
+.stat-mini:hover{border-color:var(--blue);box-shadow:0 2px 12px rgba(37,99,235,.08)}
+.stat-mini-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.icon-blue{background:#eff6ff}.icon-green{background:#f0fdf4}.icon-red{background:#fef2f2}.icon-purple{background:#f5f3ff}
+.stat-mini-label{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px}
+.stat-mini-value{font-size:18px;font-weight:800;color:var(--navy)}
+
+/* ── Two-col layout ── */
+.two-col{display:grid;grid-template-columns:1fr 340px;gap:22px}
+@media(max-width:1100px){.two-col{grid-template-columns:1fr}}
+
+/* ── Balance card ── */
+.balance-card{background:linear-gradient(135deg,#0f2356 0%,#1a3a8f 60%,#2563eb 100%);border-radius:18px;padding:26px 28px;color:#fff;position:relative;overflow:hidden;margin-bottom:22px}
+.balance-card::before{content:'';position:absolute;top:-30px;right:-30px;width:180px;height:180px;background:rgba(255,255,255,.05);border-radius:50%}
+.balance-card::after{content:'';position:absolute;bottom:-50px;right:60px;width:120px;height:120px;background:rgba(255,255,255,.04);border-radius:50%}
+.bc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.bc-greeting{font-size:14px;font-weight:500;opacity:.8}
+.bc-name{font-size:18px;font-weight:800;margin-top:2px}
+.bc-time{text-align:right}
+.bc-clock{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.bc-date{font-size:12px;opacity:.7;margin-top:2px}
+.bc-label{font-size:12px;font-weight:600;opacity:.7;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px}
+.bc-amount{font-size:38px;font-weight:800;letter-spacing:-1px;line-height:1}
+.bc-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:22px;padding-top:18px;border-top:1px solid rgba(255,255,255,.15)}
+.bc-acct{display:flex;align-items:center;gap:10px}
+.bc-acct-icon{width:30px;height:30px;background:rgba(255,255,255,.15);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.bc-acct-num{font-size:16px;font-weight:700;letter-spacing:1px;font-family:monospace}
+.bc-acct-label{font-size:11px;opacity:.6}
+.bc-actions{display:flex;gap:10px}
+.bc-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;padding:8px 16px;border-radius:24px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;transition:.15s;text-decoration:none;backdrop-filter:blur(4px)}
+.bc-btn:hover{background:rgba(255,255,255,.25)}
+
+/* ── Right stats panel ── */
+.right-panel .panel{background:var(--white);border:1.5px solid var(--border);border-radius:14px;padding:20px;margin-bottom:18px}
+.panel-title{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:16px}
+.stat-row-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f8fafc}
+.stat-row-item:last-child{border-bottom:none}
+.stat-row-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px}
+.stat-row-label{font-size:12px;color:var(--muted)}
+.stat-row-value{font-size:15px;font-weight:700;color:var(--navy);margin-top:1px}
+.quick-transfer .form-group{margin-bottom:12px}
+.quick-transfer label{font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.quick-transfer input,.quick-transfer select{width:100%;background:#f8fafc;border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--text);outline:none;transition:.15s;font-family:inherit}
+.quick-transfer input:focus,.quick-transfer select:focus{border-color:var(--blue);background:var(--white)}
+
+/* ── What would you like ── */
+.actions-header{margin-bottom:16px}
+.actions-header h3{font-size:17px;font-weight:700;color:var(--navy)}
+.actions-header p{font-size:13px;color:var(--muted);margin-top:3px}
+.actions-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+@media(max-width:900px){.actions-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.actions-grid{grid-template-columns:repeat(2,1fr)}}
+.action-card{border-radius:14px;padding:20px 16px;text-align:center;cursor:pointer;transition:.2s;border:1.5px solid transparent;text-decoration:none}
+.action-card:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,0,0,.08)}
+.ac-blue{background:#eff6ff;border-color:#bfdbfe}.ac-blue:hover{border-color:var(--blue)}
+.ac-green{background:#f0fdf4;border-color:#bbf7d0}.ac-green:hover{border-color:#16a34a}
+.ac-purple{background:#f5f3ff;border-color:#ddd6fe}.ac-purple:hover{border-color:#7c3aed}
+.ac-orange{background:#fffbeb;border-color:#fcd34d}.ac-orange:hover{border-color:#d97706}
+.action-icon{font-size:28px;margin-bottom:10px}
+.action-label{font-size:12px;font-weight:700;color:var(--navy)}
+.action-sub{font-size:11px;color:var(--muted);margin-top:3px}
+
+/* ── Transactions table ── */
+.panel{background:var(--white);border:1.5px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:22px}
+.panel-header{padding:16px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.panel-header h3{font-size:14px;font-weight:700;color:var(--navy)}
+.tbl{width:100%;border-collapse:collapse;min-width:480px}
+.tbl th{padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#94a3b8;border-bottom:1px solid #f1f5f9;text-align:left;white-space:nowrap}
+.tbl td{padding:12px 16px;font-size:13px;color:var(--muted);border-bottom:1px solid #f8fafc;white-space:nowrap}
 .tbl tr:last-child td{border-bottom:none}
 .overflow-x{overflow-x:auto}
-/* Badges */
 .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
 .badge-credit{background:#dcfce7;color:#166534}
 .badge-hold{background:#fef3c7;color:#92400e}
 .badge-release,.badge-transfer{background:#dbeafe;color:#1e40af}
-.badge-active,.badge-approved,.badge-completed{background:#dcfce7;color:#166534}
-.badge-inactive,.badge-rejected{background:#fee2e2;color:#991b1b}
+.badge-completed{background:#dcfce7;color:#166534}
+.badge-active{background:#fef3c7;color:#92400e}
 .badge-pending{background:#fef3c7;color:#92400e}
-.badge-verified{background:#dcfce7;color:#166534}
-.badge-unverified,.badge-cancelled{background:#f1f5f9;color:#64748b}
-/* Form */
+.badge-approved{background:#dcfce7;color:#166534}
+.badge-rejected{background:#fee2e2;color:#991b1b}
+
+/* ── Modals ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--white);border-radius:18px;width:100%;max-width:500px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.modal-header{padding:22px 24px 0;display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:17px;font-weight:700;color:var(--navy)}
+.modal-close{background:transparent;border:none;font-size:22px;cursor:pointer;color:#94a3b8;line-height:1}.modal-close:hover{color:#ef4444}
+.modal-body{padding:18px 24px 8px}
+.modal-footer{padding:8px 24px 22px;display:flex;gap:10px;justify-content:flex-end}
 .form-group{margin-bottom:14px}
-.form-label{display:block;font-size:12px;font-weight:700;color:#374151;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
-.form-input,.form-select,.form-textarea{width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:11px 14px;font-size:14px;color:#1e293b;outline:none;transition:.15s;font-family:inherit}
-.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:#2563eb;background:#fff}
+.form-label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.form-input,.form-select,.form-textarea{width:100%;background:#f8fafc;border:1.5px solid var(--border);border-radius:8px;padding:11px 14px;font-size:14px;color:var(--text);outline:none;transition:.15s;font-family:inherit}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--blue);background:var(--white)}
 .form-textarea{resize:vertical;min-height:80px}
-.form-select option{background:#fff}
-/* Buttons */
-.btn{padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:.15s;display:inline-flex;align-items:center;gap:6px}
-.btn-primary{background:#1d4ed8;color:#fff}.btn-primary:hover{background:#1e40af}
+.btn{padding:10px 22px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:#1d4ed8}
+.btn-cancel{background:#f1f5f9;color:var(--muted)}.btn-cancel:hover{background:#e2e8f0}
 .btn-sm{padding:7px 14px;font-size:12px}
 .btn:disabled{opacity:.5;cursor:not-allowed}
-/* Modal */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:none;align-items:center;justify-content:center;padding:16px}
-.modal-overlay.open{display:flex}
-.modal{background:#fff;border-radius:16px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
-.modal-header{padding:20px 22px 0;display:flex;align-items:center;justify-content:space-between}
-.modal-title{font-size:17px;font-weight:700;color:#0f2356}
-.modal-close{background:transparent;border:none;font-size:22px;cursor:pointer;color:#94a3b8;line-height:1}.modal-close:hover{color:#ef4444}
-.modal-body{padding:18px 22px 22px}
-.modal-footer{padding:0 22px 18px;display:flex;gap:10px;justify-content:flex-end}
-/* Alert */
-.alert{padding:12px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none}
+.alert{padding:11px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none}
 .alert-err{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
 .alert-ok{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}
-/* Loader */
-.loader-overlay{position:fixed;inset:0;background:rgba(240,244,248,.92);z-index:999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px}
-.spinner{width:40px;height:40px;border:4px solid #dbeafe;border-top:4px solid #1d4ed8;border-radius:50%;animation:spin .8s linear infinite}
+.info-note{background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 12px;font-size:12px;color:#92400e;margin-bottom:14px}
+
+/* ── Loader ── */
+.loader-overlay{position:fixed;inset:0;background:rgba(244,246,251,.92);z-index:999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+.spinner{width:42px;height:42px;border:4px solid #dbeafe;border-top:4px solid var(--blue);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.loader-text{font-size:14px;color:#1d4ed8;font-weight:600}
-/* Empty */
 .empty{text-align:center;padding:32px;color:#94a3b8;font-size:13px}
-/* Status bar */
-.status-bar{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:24px;font-size:13px;color:#1e40af}
-.status-bar.warn{background:#fffbeb;border-color:#fcd34d;color:#92400e}
-footer{background:#0f2356;color:#93c5fd;text-align:center;padding:16px;font-size:12px}
+.mob-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:150}
+@media(max-width:900px){.mob-backdrop.show{display:block}}
+footer{background:var(--white);border-top:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--muted)}
   </style>
 </head>
 <body>
 
 <div class="loader-overlay" id="loader">
   <div class="spinner"></div>
-  <span class="loader-text">Loading your dashboard...</span>
+  <span style="font-size:14px;color:var(--blue);font-weight:600">Loading your dashboard...</span>
 </div>
 
-<nav class="navbar">
-  <a href="/">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 48" width="160" height="36">
-      <path d="M8 10 L8 38 L16 38 L16 22 L22 34 L28 22 L28 38 L36 38 L36 10 L28 10 L22 24 L16 10 Z" fill="#fff"/>
-      <path d="M6 42 Q22 35 38 42" stroke="#93c5fd" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-      <text x="46" y="29" font-family="Inter,sans-serif" font-size="17" font-weight="700" fill="#fff">MercurialVest</text>
-      <text x="47" y="42" font-family="Inter,sans-serif" font-size="8" font-weight="500" fill="#93c5fd" letter-spacing="2.5">BANK</text>
-    </svg>
-  </a>
-  <div class="nav-links">
-    <span id="nav-acct" style="font-size:12px;color:#93c5fd;font-family:monospace"></span>
-    <button class="logout-btn" onclick="doLogout()">Sign Out</button>
-  </div>
-</nav>
+<div class="mob-backdrop" id="mob-backdrop" onclick="closeSidebar()"></div>
 
-<div class="page">
-
-  <div class="welcome">
-    <h1 id="welcome-msg">Welcome back 👋</h1>
-    <p id="welcome-sub">Here's your account overview</p>
-  </div>
-
-  <!-- KYC alert -->
-  <div class="status-bar warn" id="kyc-alert" style="display:none">
-    ⚠️ Your account is not yet KYC verified. Some features may be limited. Please contact support to complete verification.
-  </div>
-
-  <!-- Balances -->
-  <div class="balance-grid">
-    <div class="bal-card primary">
-      <div class="bal-label">Available Balance</div>
-      <div class="bal-amount" id="bal-available">$0.00</div>
-      <div class="bal-sub">Ready to use</div>
-      <div class="bal-icon">💳</div>
-    </div>
-    <div class="bal-card secondary">
-      <div class="bal-label">Held Funds</div>
-      <div class="bal-amount" id="bal-held" style="color:#d97706">$0.00</div>
-      <div class="bal-sub">Pending release</div>
-      <div class="bal-icon">🔒</div>
-    </div>
-    <div class="bal-card secondary">
-      <div class="bal-label">Account Status</div>
-      <div class="bal-amount" id="bal-status" style="font-size:18px;margin-top:4px"></div>
-      <div class="bal-sub" id="bal-kyc"></div>
-      <div class="bal-icon">✅</div>
+<!-- ── SIDEBAR ── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 48" width="130" height="30">
+        <path d="M8 10 L8 38 L16 38 L16 22 L22 34 L28 22 L28 38 L36 38 L36 10 L28 10 L22 24 L16 10 Z" fill="#0f2356"/>
+        <path d="M6 42 Q22 35 38 42" stroke="#2563eb" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <text x="46" y="29" font-family="Inter,sans-serif" font-size="17" font-weight="700" fill="#0f2356">MercurialVest</text>
+        <text x="47" y="42" font-family="Inter,sans-serif" font-size="8" font-weight="500" fill="#2563eb" letter-spacing="2.5">BANK</text>
+      </svg>
     </div>
   </div>
 
-  <!-- Quick actions -->
-  <div class="section-heading">Quick Actions</div>
-  <div class="actions-grid">
-    <div class="action-btn" onclick="openModal('modal-transfer')">
-      <div class="icon">📤</div>
-      <div class="label">Send Transfer</div>
-    </div>
-    <div class="action-btn" onclick="openModal('modal-loan')">
-      <div class="icon">💰</div>
-      <div class="label">Apply for Loan</div>
-    </div>
-    <div class="action-btn" onclick="openModal('modal-ticket')">
-      <div class="icon">🎫</div>
-      <div class="label">Support Ticket</div>
-    </div>
-    <div class="action-btn" onclick="loadSection('transfers')">
-      <div class="icon">📋</div>
-      <div class="label">My Transfers</div>
-    </div>
-    <div class="action-btn" onclick="loadSection('loans')">
-      <div class="icon">📑</div>
-      <div class="label">My Loans</div>
-    </div>
-    <div class="action-btn" onclick="loadSection('history')">
-      <div class="icon">📊</div>
-      <div class="label">Transactions</div>
+  <div class="sidebar-user">
+    <div class="avatar" id="sb-avatar">?</div>
+    <div>
+      <div class="user-name" id="sb-name">Loading...</div>
+      <div class="user-id">ID: <span id="sb-acct-short">—</span></div>
+      <button class="kyc-badge" id="kyc-badge" onclick="showSection('tickets')">
+        <span id="kyc-icon">⚠</span> <span id="kyc-text">Verify KYC</span>
+      </button>
     </div>
   </div>
 
-  <!-- Panels -->
-  <div class="panel" id="panel-history">
-    <div class="panel-header">
-      <h3>Recent Transactions</h3>
-      <button class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border:none;font-size:12px;font-weight:600;padding:6px 12px;border-radius:6px;cursor:pointer" onclick="loadSection('history')">View All</button>
-    </div>
-    <div id="txn-body"><div class="empty">Loading...</div></div>
-  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Main Menu</div>
+    <a class="nav-item active" href="#" onclick="showSection('dashboard',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <a class="nav-item" href="#" onclick="showSection('transactions',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Transactions
+    </a>
+    <a class="nav-item" href="#" onclick="showSection('cards',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+      Cards
+    </a>
 
-  <div class="panel" id="panel-transfers" style="display:none">
-    <div class="panel-header">
-      <h3>My Transfer Requests</h3>
-      <button class="btn btn-primary btn-sm" onclick="openModal('modal-transfer')">+ New Transfer</button>
-    </div>
-    <div class="overflow-x" id="transfers-body"><div class="empty">Loading...</div></div>
-  </div>
+    <div class="nav-section">Transfers</div>
+    <a class="nav-item" href="#" onclick="openModal('modal-transfer');closeSidebar()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      Local Transfer
+    </a>
+    <a class="nav-item" href="#" onclick="openModal('modal-transfer');closeSidebar()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      International Wire
+    </a>
+    <a class="nav-item" href="#" onclick="showSection('deposit',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Deposit
+    </a>
 
-  <div class="panel" id="panel-loans" style="display:none">
-    <div class="panel-header">
-      <h3>My Loan Applications</h3>
-      <button class="btn btn-primary btn-sm" onclick="openModal('modal-loan')">+ Apply for Loan</button>
-    </div>
-    <div class="overflow-x" id="loans-body"><div class="empty">Loading...</div></div>
-  </div>
+    <div class="nav-section">Services</div>
+    <a class="nav-item" href="#" onclick="openModal('modal-loan');closeSidebar()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      Loan Request
+    </a>
+    <a class="nav-item" href="#" onclick="showSection('tickets',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Support
+    </a>
+  </nav>
 
+  <div class="sidebar-bottom">
+    <a class="btn-sm-outline" href="#" onclick="openModal('modal-profile');return false">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Profile
+    </a>
+    <button class="btn-sm-logout" onclick="doLogout()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Logout
+    </button>
+  </div>
+  <div class="secure-badge">
+    <span>🔒 Secure Banking</span>
+    <span>v2.0</span>
+  </div>
+</aside>
+
+<!-- ── MAIN ── -->
+<div class="main">
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="hamburger" onclick="toggleSidebar()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="date-display">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span id="topbar-date">Loading...</span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="balance-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        <span id="topbar-bal">$0.00</span>
+      </div>
+      <button class="notif-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </button>
+      <div class="avatar avatar-sm" id="topbar-avatar">?</div>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <div class="page-content">
+
+    <!-- ═══ DASHBOARD ═══ -->
+    <div class="section active" id="section-dashboard">
+
+      <!-- Stats mini row -->
+      <div class="stats-row">
+        <div class="stat-mini">
+          <div>
+            <div class="stat-mini-label">Current Balance</div>
+            <div class="stat-mini-value" id="st-balance">$0.00</div>
+          </div>
+          <div class="stat-mini-icon icon-blue">💳</div>
+        </div>
+        <div class="stat-mini">
+          <div>
+            <div class="stat-mini-label">Monthly Income</div>
+            <div class="stat-mini-value" id="st-income">$0</div>
+          </div>
+          <div class="stat-mini-icon icon-green">📈</div>
+        </div>
+        <div class="stat-mini">
+          <div>
+            <div class="stat-mini-label">Monthly Outgoing</div>
+            <div class="stat-mini-value" id="st-outgoing">$0</div>
+          </div>
+          <div class="stat-mini-icon icon-red">📉</div>
+        </div>
+        <div class="stat-mini">
+          <div>
+            <div class="stat-mini-label">Transaction Limit</div>
+            <div class="stat-mini-value" id="st-limit">$500,000</div>
+          </div>
+          <div class="stat-mini-icon icon-purple">⚡</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <!-- Left column -->
+        <div>
+          <!-- Big balance card -->
+          <div class="balance-card">
+            <div class="bc-top">
+              <div>
+                <div class="bc-greeting" id="bc-greeting">Good Morning</div>
+                <div class="bc-name" id="bc-first-name">User</div>
+              </div>
+              <div class="bc-time">
+                <div class="bc-clock" id="bc-clock">00:00:00</div>
+                <div class="bc-date" id="bc-date">—</div>
+              </div>
+            </div>
+            <div class="bc-label">Available Balance</div>
+            <div class="bc-amount" id="bc-balance">$0.00 USD</div>
+            <div class="bc-bottom">
+              <div class="bc-acct">
+                <div class="bc-acct-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <div>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span style="font-size:11px;opacity:.6">Your Account Number</span>
+                    <span id="bc-status-badge" style="background:rgba(239,68,68,.2);color:#fca5a5;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px">Inactive</span>
+                  </div>
+                  <div class="bc-acct-num" id="bc-acct-num">——————</div>
+                </div>
+              </div>
+              <div class="bc-actions">
+                <a class="bc-btn" href="#" onclick="showSection('transactions',null);return false">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                  Transactions
+                </a>
+                <a class="bc-btn" href="#" onclick="showSection('deposit',null);return false">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/></svg>
+                  Top up
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- What would you like to do -->
+          <div class="actions-header">
+            <h3>What would you like to do today?</h3>
+            <p>Choose from our popular actions below</p>
+          </div>
+          <div class="actions-grid">
+            <div class="action-card ac-blue" onclick="showSection('transactions',null)">
+              <div class="action-icon">📊</div>
+              <div class="action-label">Transactions</div>
+              <div class="action-sub">View history</div>
+            </div>
+            <div class="action-card ac-green" onclick="openModal('modal-transfer')">
+              <div class="action-icon">📤</div>
+              <div class="action-label">Send Money</div>
+              <div class="action-sub">Transfer funds</div>
+            </div>
+            <div class="action-card ac-purple" onclick="openModal('modal-loan')">
+              <div class="action-icon">💰</div>
+              <div class="action-label">Loan Request</div>
+              <div class="action-sub">Apply now</div>
+            </div>
+            <div class="action-card ac-orange" onclick="openModal('modal-ticket')">
+              <div class="action-icon">🎫</div>
+              <div class="action-label">Support</div>
+              <div class="action-sub">Get help</div>
+            </div>
+          </div>
+
+          <!-- Recent transactions -->
+          <div class="panel">
+            <div class="panel-header">
+              <h3>Recent Transactions</h3>
+              <button class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border:none;font-weight:600;cursor:pointer" onclick="showSection('transactions',null)">View All</button>
+            </div>
+            <div id="recent-txns"><div class="empty">Loading transactions...</div></div>
+          </div>
+        </div>
+
+        <!-- Right column -->
+        <div class="right-panel">
+          <div class="panel">
+            <div class="panel-title">Account Statistics</div>
+            <div class="stat-row-item">
+              <div class="stat-row-icon" style="background:#eff6ff">💳</div>
+              <div><div class="stat-row-label">Transaction Limit</div><div class="stat-row-value" id="rs-limit">$500,000.00</div></div>
+            </div>
+            <div class="stat-row-item">
+              <div class="stat-row-icon" style="background:#fffbeb">⏱</div>
+              <div><div class="stat-row-label">Pending Transactions</div><div class="stat-row-value" id="rs-pending">$0.00</div></div>
+            </div>
+            <div class="stat-row-item">
+              <div class="stat-row-icon" style="background:#f0fdf4">📈</div>
+              <div><div class="stat-row-label">Transaction Volume</div><div class="stat-row-value" id="rs-volume">$0.00</div></div>
+            </div>
+            <div class="stat-row-item">
+              <div class="stat-row-icon" style="background:#f5f3ff">📅</div>
+              <div><div class="stat-row-label">Account Age</div><div class="stat-row-value" id="rs-age">—</div></div>
+            </div>
+          </div>
+
+          <div class="panel quick-transfer">
+            <div class="panel-title">Quick Transfer</div>
+            <div class="form-group"><label>Recipient Name</label><input type="text" id="qt-name" placeholder="Full name"></div>
+            <div class="form-group"><label>Account / IBAN</label><input type="text" id="qt-account" placeholder="Account number"></div>
+            <div class="form-group"><label>Amount (USD)</label><input type="number" id="qt-amount" placeholder="0.00" min="0.01"></div>
+            <div class="form-group"><label>Bank</label><input type="text" id="qt-bank" placeholder="Bank name"></div>
+            <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doQuickTransfer()">Send Transfer →</button>
+            <div class="alert alert-err" id="qt-err" style="margin-top:10px"></div>
+            <div class="alert alert-ok" id="qt-ok" style="margin-top:10px"></div>
+          </div>
+
+          <!-- My transfer requests -->
+          <div class="panel">
+            <div class="panel-title">My Transfer Requests</div>
+            <div id="my-transfers-list"><div class="empty" style="padding:16px">Loading...</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TRANSACTIONS ═══ -->
+    <div class="section" id="section-transactions">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+        <div><h2 style="font-size:19px;font-weight:800;color:var(--navy)">All Transactions</h2><p style="font-size:13px;color:var(--muted);margin-top:3px">Your complete transaction history</p></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Transaction History</h3>
+          <input type="text" id="txn-search" placeholder="Search..." style="background:#f8fafc;border:1.5px solid var(--border);border-radius:8px;padding:7px 12px;font-size:13px;outline:none;width:200px" oninput="filterTxns()">
+        </div>
+        <div class="overflow-x" id="txn-full-body"><div class="empty">Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- ═══ CARDS ═══ -->
+    <div class="section" id="section-cards">
+      <h2 style="font-size:19px;font-weight:800;color:var(--navy);margin-bottom:6px">My Cards</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:24px">Virtual debit card linked to your account</p>
+      <div style="max-width:380px">
+        <div style="background:linear-gradient(135deg,#0f2356,#2563eb);border-radius:18px;padding:28px;color:#fff;position:relative;overflow:hidden">
+          <div style="position:absolute;top:-20px;right:-20px;width:140px;height:140px;background:rgba(255,255,255,.06);border-radius:50%"></div>
+          <div style="font-size:11px;opacity:.6;letter-spacing:2px;text-transform:uppercase;margin-bottom:24px">MercurialVest Bank</div>
+          <div style="font-size:22px;font-weight:700;letter-spacing:3px;font-family:monospace;margin-bottom:22px" id="card-num">•••• •••• •••• ——</div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-end">
+            <div><div style="font-size:10px;opacity:.6;margin-bottom:3px">CARDHOLDER</div><div style="font-size:14px;font-weight:700" id="card-name">—</div></div>
+            <div style="font-size:28px;opacity:.7">💳</div>
+          </div>
+        </div>
+        <div style="margin-top:16px;background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:16px">
+          <div style="font-size:13px;color:var(--muted);margin-bottom:8px">Card Status</div>
+          <div style="font-size:14px;font-weight:600;color:#d97706">⚠️ Card activation requires KYC verification. Please contact support.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ DEPOSIT ═══ -->
+    <div class="section" id="section-deposit">
+      <h2 style="font-size:19px;font-weight:800;color:var(--navy);margin-bottom:6px">Top Up / Deposit</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:24px">Request a deposit to your account</p>
+      <div style="max-width:500px">
+        <div style="background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:24px">
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;font-size:13px;color:#166534;margin-bottom:20px">
+            ℹ️ To deposit funds, please contact our support team or submit a support ticket. Deposits are processed by our administrators within 1-2 business days.
+          </div>
+          <div style="margin-bottom:14px"><div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase">Bank Name</div><div style="font-size:15px;font-weight:700;color:var(--navy)">MercurialVest Bank</div></div>
+          <div style="margin-bottom:14px"><div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase">Your Account Number</div><div style="font-size:15px;font-weight:700;color:var(--navy);font-family:monospace" id="dep-acct-num">—</div></div>
+          <div style="margin-bottom:20px"><div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase">Reference</div><div style="font-size:14px;color:var(--navy)" id="dep-ref">—</div></div>
+          <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="openModal('modal-ticket')">📧 Contact Support for Deposit</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TICKETS ═══ -->
+    <div class="section" id="section-tickets">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+        <div><h2 style="font-size:19px;font-weight:800;color:var(--navy)">Support Tickets</h2><p style="font-size:13px;color:var(--muted);margin-top:3px">Your submitted support requests</p></div>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-ticket')">+ New Ticket</button>
+      </div>
+      <div class="panel"><div class="overflow-x" id="tickets-body"><div class="empty">Loading...</div></div></div>
+    </div>
+
+  </div><!-- /page-content -->
+
+  <footer>
+    <div style="display:flex;align-items:center;gap:8px">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 48" width="90" height="20">
+        <path d="M8 10 L8 38 L16 38 L16 22 L22 34 L28 22 L28 38 L36 38 L36 10 L28 10 L22 24 L16 10 Z" fill="#0f2356"/>
+        <text x="42" y="29" font-family="Inter,sans-serif" font-size="15" font-weight="700" fill="#0f2356">MercurialVest</text>
+      </svg>
+      <span>© 2025 MercurialVest. All rights reserved.</span>
+    </div>
+    <div style="display:flex;gap:18px">
+      <a href="privacy-policy" style="color:var(--muted);text-decoration:none">Privacy Policy</a>
+      <a href="terms-of-service" style="color:var(--muted);text-decoration:none">Terms of Service</a>
+      <a href="#" onclick="openModal('modal-ticket');return false" style="color:var(--muted);text-decoration:none">Contact Support</a>
+    </div>
+  </footer>
 </div>
 
-<footer>&copy; 2025 MercurialVest Bank. All rights reserved.</footer>
+<!-- ═══ MODALS ═══ -->
 
 <!-- Transfer Modal -->
 <div class="modal-overlay" id="modal-transfer">
@@ -222,15 +541,15 @@ footer{background:#0f2356;color:#93c5fd;text-align:center;padding:16px;font-size
     <div class="modal-body">
       <div class="alert alert-err" id="tf-err"></div>
       <div class="alert alert-ok" id="tf-ok"></div>
-      <p style="font-size:12px;color:#64748b;margin-bottom:14px;background:#fffbeb;padding:10px 12px;border-radius:8px;border:1px solid #fcd34d">⏳ Transfers require admin approval before processing.</p>
+      <div class="info-note">⏳ All transfers require admin approval before funds are released.</div>
       <div class="form-group"><label class="form-label">Recipient Full Name</label><input class="form-input" type="text" id="tf-name" placeholder="John Smith"></div>
-      <div class="form-group"><label class="form-label">Recipient Account Number</label><input class="form-input" type="text" id="tf-account" placeholder="Account / IBAN"></div>
+      <div class="form-group"><label class="form-label">Recipient Account / IBAN</label><input class="form-input" type="text" id="tf-account" placeholder="Account number or IBAN"></div>
       <div class="form-group"><label class="form-label">Bank Name</label><input class="form-input" type="text" id="tf-bank" placeholder="Bank of America"></div>
       <div class="form-group"><label class="form-label">Amount (USD)</label><input class="form-input" type="number" id="tf-amount" placeholder="0.00" min="0.01" step="0.01"></div>
       <div class="form-group"><label class="form-label">Reason / Note</label><textarea class="form-textarea" id="tf-reason" placeholder="Purpose of transfer..."></textarea></div>
     </div>
     <div class="modal-footer">
-      <button class="btn" style="background:#f1f5f9;color:#374151;border:none" onclick="closeModal('modal-transfer')">Cancel</button>
+      <button class="btn btn-cancel" onclick="closeModal('modal-transfer')">Cancel</button>
       <button class="btn btn-primary" onclick="doTransfer()" id="tf-btn">Submit Request</button>
     </div>
   </div>
@@ -239,25 +558,19 @@ footer{background:#0f2356;color:#93c5fd;text-align:center;padding:16px;font-size
 <!-- Loan Modal -->
 <div class="modal-overlay" id="modal-loan">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">💰 Apply for Loan</div><button class="modal-close" onclick="closeModal('modal-loan')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">💰 Loan Application</div><button class="modal-close" onclick="closeModal('modal-loan')">✕</button></div>
     <div class="modal-body">
       <div class="alert alert-err" id="ln-err"></div>
       <div class="alert alert-ok" id="ln-ok"></div>
-      <div class="form-group"><label class="form-label">Loan Amount (USD)</label><input class="form-input" type="number" id="ln-amount" placeholder="0.00" min="100" step="0.01"></div>
+      <div class="form-group"><label class="form-label">Loan Amount (USD)</label><input class="form-input" type="number" id="ln-amount" placeholder="Minimum $100" min="100" step="0.01"></div>
       <div class="form-group"><label class="form-label">Repayment Term</label>
-        <select class="form-select" id="ln-term">
-          <option value="6">6 months</option>
-          <option value="12" selected>12 months</option>
-          <option value="24">24 months</option>
-          <option value="36">36 months</option>
-          <option value="60">60 months</option>
-        </select>
+        <select class="form-select" id="ln-term"><option value="6">6 months</option><option value="12" selected>12 months</option><option value="24">24 months</option><option value="36">36 months</option><option value="60">60 months</option></select>
       </div>
       <div class="form-group"><label class="form-label">Purpose</label><textarea class="form-textarea" id="ln-purpose" placeholder="What will you use this loan for?"></textarea></div>
-      <div class="form-group"><label class="form-label">Monthly Income (USD, optional)</label><input class="form-input" type="number" id="ln-income" placeholder="0.00" min="0" step="0.01"></div>
+      <div class="form-group"><label class="form-label">Monthly Income (optional)</label><input class="form-input" type="number" id="ln-income" placeholder="$0.00" min="0" step="0.01"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn" style="background:#f1f5f9;color:#374151;border:none" onclick="closeModal('modal-loan')">Cancel</button>
+      <button class="btn btn-cancel" onclick="closeModal('modal-loan')">Cancel</button>
       <button class="btn btn-primary" onclick="doLoan()" id="ln-btn">Submit Application</button>
     </div>
   </div>
@@ -271,137 +584,272 @@ footer{background:#0f2356;color:#93c5fd;text-align:center;padding:16px;font-size
       <div class="alert alert-err" id="tk-err"></div>
       <div class="alert alert-ok" id="tk-ok"></div>
       <div class="form-group"><label class="form-label">Category</label>
-        <select class="form-select" id="tk-category">
-          <option value="general">General</option>
-          <option value="billing">Billing</option>
-          <option value="account">Account</option>
-          <option value="technical">Technical</option>
-          <option value="fraud">Fraud / Security</option>
-        </select>
+        <select class="form-select" id="tk-category"><option value="general">General</option><option value="billing">Billing</option><option value="account">Account</option><option value="technical">Technical</option><option value="fraud">Fraud / Security</option></select>
       </div>
       <div class="form-group"><label class="form-label">Subject</label><input class="form-input" type="text" id="tk-subject" placeholder="Brief description..."></div>
       <div class="form-group"><label class="form-label">Message</label><textarea class="form-textarea" id="tk-message" style="min-height:100px" placeholder="Describe your issue in detail..."></textarea></div>
     </div>
     <div class="modal-footer">
-      <button class="btn" style="background:#f1f5f9;color:#374151;border:none" onclick="closeModal('modal-ticket')">Cancel</button>
+      <button class="btn btn-cancel" onclick="closeModal('modal-ticket')">Cancel</button>
       <button class="btn btn-primary" onclick="doTicket()" id="tk-btn">Submit Ticket</button>
     </div>
   </div>
 </div>
 
+<!-- Profile Modal -->
+<div class="modal-overlay" id="modal-profile">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">👤 My Profile</div><button class="modal-close" onclick="closeModal('modal-profile')">✕</button></div>
+    <div class="modal-body" id="profile-body">
+      <div class="empty">Loading...</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel" onclick="closeModal('modal-profile')">Close</button>
+      <button class="btn btn-primary" onclick="saveProfile()" id="prof-btn">Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <script>
-const SUPA_URL = "https://uatnxwvkpuvxvgngxxez.supabase.co";
-const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhdG54d3ZrcHV2eHZnbmd4eGV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1NjM1OTAsImV4cCI6MjEwMjEzOTU5MH0.l0X90PCIpX4OZoU1yTEpuh3Ro7ZqkP79KCFiH3RQ_lI";
-const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
-let userId = null;
+const SUPA_URL="https://uatnxwvkpuvxvgngxxez.supabase.co";
+const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhdG54d3ZrcHV2eHZnbmd4eGV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1NjM1OTAsImV4cCI6MjEwMjEzOTU5MH0.l0X90PCIpX4OZoU1yTEpuh3Ro7ZqkP79KCFiH3RQ_lI";
+const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
+let userId=null,userProfile=null,allTxns=[];
 
-async function init() {
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) { window.location.replace('/login'); return; }
-  userId = session.user.id;
-  const { data: p } = await sb.from('profiles').select('*').eq('id', userId).single();
-  if (!p) { window.location.replace('/login'); return; }
-  if (p.status === 'inactive') { sb.auth.signOut(); window.location.replace('/login'); return; }
-
-  const name = p.full_name || p.email.split('@')[0];
-  document.getElementById('welcome-msg').textContent = 'Welcome back, ' + name + ' 👋';
-  document.getElementById('welcome-sub').textContent = 'Account: ' + (p.account_number || '—');
-  document.getElementById('nav-acct').textContent = p.account_number || '';
-  document.getElementById('bal-available').textContent = '$' + Number(p.balance||0).toLocaleString('en',{minimumFractionDigits:2});
-  document.getElementById('bal-held').textContent = '$' + Number(p.held_funds||0).toLocaleString('en',{minimumFractionDigits:2});
-  document.getElementById('bal-status').innerHTML = `<span class="badge badge-${p.status}">${p.status}</span>`;
-  document.getElementById('bal-kyc').textContent = 'KYC: ' + (p.kyc_status || 'unverified');
-  if ((p.kyc_status || 'unverified') === 'unverified') document.getElementById('kyc-alert').style.display = 'flex';
+async function init(){
+  const{data:{session}}=await sb.auth.getSession();
+  if(!session){window.location.replace('/login');return;}
+  userId=session.user.id;
+  const{data:p}=await sb.from('profiles').select('*').eq('id',userId).single();
+  if(!p||p.status==='inactive'){sb.auth.signOut();window.location.replace('/login');return;}
+  userProfile=p;
+  const name=p.full_name||p.email.split('@')[0];
+  const initial=(name[0]||'?').toUpperCase();
+  // Sidebar
+  document.getElementById('sb-avatar').textContent=initial;
+  document.getElementById('sb-name').textContent=name;
+  document.getElementById('sb-acct-short').textContent=p.account_number||'—';
+  // KYC badge
+  const kyc=p.kyc_status||'unverified';
+  const kycEl=document.getElementById('kyc-badge');
+  if(kyc==='verified'){kycEl.classList.add('verified');document.getElementById('kyc-icon').textContent='✓';document.getElementById('kyc-text').textContent='KYC Verified';}
+  // Topbar
+  document.getElementById('topbar-avatar').textContent=initial;
+  document.getElementById('topbar-bal').textContent='$'+Number(p.balance||0).toLocaleString('en',{minimumFractionDigits:2});
+  // Balance card
+  const bal='$'+Number(p.balance||0).toLocaleString('en',{minimumFractionDigits:2});
+  document.getElementById('st-balance').textContent=bal;
+  document.getElementById('st-limit').textContent='$'+(p.transaction_limit||500000).toLocaleString('en');
+  document.getElementById('bc-first-name').textContent=name.split(' ')[0];
+  document.getElementById('bc-balance').textContent=bal+' USD';
+  document.getElementById('bc-acct-num').textContent=p.account_number||'——————';
+  document.getElementById('rs-limit').textContent='$'+Number(p.transaction_limit||500000).toLocaleString('en',{minimumFractionDigits:2});
+  document.getElementById('dep-acct-num').textContent=p.account_number||'—';
+  document.getElementById('dep-ref').textContent='REF-'+userId.substring(0,8).toUpperCase();
+  document.getElementById('card-name').textContent=name.toUpperCase();
+  document.getElementById('card-num').textContent='•••• •••• •••• '+(p.account_number||'——').slice(-4);
+  // Status badge on card
+  const sb2=document.getElementById('bc-status-badge');
+  if(p.status==='active'){sb2.style.background='rgba(74,222,128,.2)';sb2.style.color='#4ade80';sb2.textContent='Active';}
+  // Account age
+  const daysOld=Math.floor((Date.now()-new Date(p.created_at))/86400000);
+  document.getElementById('rs-age').textContent=daysOld+(daysOld===1?' day':' days');
   await loadTxns();
-  document.getElementById('loader').style.display = 'none';
+  await loadMyTransfers();
+  startClock();
+  document.getElementById('loader').style.display='none';
 }
 
-async function loadTxns() {
-  const { data } = await sb.from('transactions').select('*').eq('user_id', userId).order('created_at',{ascending:false}).limit(20);
-  const el = document.getElementById('txn-body');
-  if (!data || !data.length) { el.innerHTML = '<div class="empty">No transactions yet.</div>'; return; }
-  el.innerHTML = '<div class="overflow-x"><table class="tbl"><thead><tr><th>Type</th><th>Amount</th><th>Reason</th><th>Status</th><th>Date</th></tr></thead><tbody>' +
-    data.map(t=>`<tr><td><span class="badge badge-${t.type}">${t.type}</span></td><td style="font-weight:700;color:${t.type==='credit'?'#16a34a':t.type==='hold'?'#d97706':'#1d4ed8'}">$${Number(t.amount).toFixed(2)}</td><td style="max-width:200px;white-space:normal">${t.reason||'—'}</td><td><span class="badge badge-${t.status}">${t.status}</span></td><td>${new Date(t.created_at).toLocaleDateString()}</td></tr>`).join('') +
+async function loadTxns(){
+  const{data}=await sb.from('transactions').select('*').eq('user_id',userId).order('created_at',{ascending:false}).limit(50);
+  allTxns=data||[];
+  // Monthly income (credits this month)
+  const now=new Date(),m=now.getMonth(),y=now.getFullYear();
+  let income=0,outgoing=0,volume=0,pending=0;
+  allTxns.forEach(t=>{
+    const d=new Date(t.created_at);
+    volume+=Number(t.amount);
+    if(t.type==='credit'&&d.getMonth()===m&&d.getFullYear()===y)income+=Number(t.amount);
+    if((t.type==='hold'||t.type==='transfer')&&d.getMonth()===m&&d.getFullYear()===y)outgoing+=Number(t.amount);
+    if(t.status==='active')pending+=Number(t.amount);
+  });
+  document.getElementById('st-income').textContent='$'+income.toLocaleString('en',{minimumFractionDigits:0});
+  document.getElementById('st-outgoing').textContent='$'+outgoing.toLocaleString('en',{minimumFractionDigits:0});
+  document.getElementById('rs-pending').textContent='$'+pending.toLocaleString('en',{minimumFractionDigits:2});
+  document.getElementById('rs-volume').textContent='$'+volume.toLocaleString('en',{minimumFractionDigits:2});
+  renderRecentTxns(allTxns.slice(0,8));
+  renderFullTxns(allTxns);
+}
+
+function renderRecentTxns(txns){
+  const el=document.getElementById('recent-txns');
+  if(!txns.length){el.innerHTML='<div class="empty">No transactions yet.</div>';return;}
+  el.innerHTML='<div class="overflow-x"><table class="tbl"><thead><tr><th>Type</th><th>Amount</th><th>Reason</th><th>Status</th><th>Date</th></tr></thead><tbody>'+
+    txns.map(t=>`<tr><td><span class="badge badge-${t.type}">${t.type}</span></td><td style="font-weight:700;color:${t.type==='credit'?'#16a34a':t.type==='hold'?'#d97706':'#2563eb'}">$${Number(t.amount).toFixed(2)}</td><td style="max-width:180px;white-space:normal;font-size:12px">${t.reason||'—'}</td><td><span class="badge badge-${t.status}">${t.status}</span></td><td>${new Date(t.created_at).toLocaleDateString()}</td></tr>`).join('')+
     '</tbody></table></div>';
 }
 
-async function loadSection(section) {
-  // hide all panels, show requested
-  document.getElementById('panel-history').style.display = section==='history'?'block':'none';
-  document.getElementById('panel-transfers').style.display = section==='transfers'?'block':'none';
-  document.getElementById('panel-loans').style.display = section==='loans'?'block':'none';
-  if (section === 'history') { await loadTxns(); document.getElementById('panel-history').style.display='block'; }
-  else if (section === 'transfers') {
-    const { data } = await sb.from('transfer_requests').select('*').eq('user_id', userId).order('created_at',{ascending:false});
-    const el = document.getElementById('transfers-body');
-    if (!data || !data.length) { el.innerHTML = '<div class="empty">No transfer requests yet.</div>'; return; }
-    el.innerHTML = '<table class="tbl"><thead><tr><th>Recipient</th><th>Bank</th><th>Amount</th><th>Reason</th><th>Status</th><th>Note</th><th>Date</th></tr></thead><tbody>' +
-      data.map(t=>`<tr><td><div style="font-weight:600">${t.recipient_name}</div><div style="font-size:11px;color:#94a3b8">${t.recipient_account}</div></td><td>${t.bank_name}</td><td style="font-weight:700">$${Number(t.amount).toFixed(2)}</td><td style="max-width:140px;white-space:normal;font-size:12px">${t.reason||'—'}</td><td><span class="badge badge-${t.status}">${t.status}</span></td><td style="max-width:140px;white-space:normal;font-size:12px;color:#64748b">${t.admin_note||'—'}</td><td>${new Date(t.created_at).toLocaleDateString()}</td></tr>`).join('') +
-      '</tbody></table>';
-  }
-  else if (section === 'loans') {
-    const { data } = await sb.from('loan_applications').select('*').eq('user_id', userId).order('created_at',{ascending:false});
-    const el = document.getElementById('loans-body');
-    if (!data || !data.length) { el.innerHTML = '<div class="empty">No loan applications yet.</div>'; return; }
-    el.innerHTML = '<table class="tbl"><thead><tr><th>Amount</th><th>Term</th><th>Purpose</th><th>Status</th><th>Admin Note</th><th>Date</th></tr></thead><tbody>' +
-      data.map(l=>`<tr><td style="font-weight:700">$${Number(l.amount).toFixed(2)}</td><td>${l.term_months} mo</td><td style="max-width:160px;white-space:normal">${l.purpose}</td><td><span class="badge badge-${l.status}">${l.status}</span></td><td style="max-width:160px;white-space:normal;font-size:12px;color:#64748b">${l.admin_note||'—'}</td><td>${new Date(l.created_at).toLocaleDateString()}</td></tr>`).join('') +
-      '</tbody></table>';
-  }
+function renderFullTxns(txns){
+  const el=document.getElementById('txn-full-body');
+  if(!txns.length){el.innerHTML='<div class="empty">No transactions yet.</div>';return;}
+  el.innerHTML='<table class="tbl"><thead><tr><th>Type</th><th>Amount</th><th>Reason</th><th>Status</th><th>Date</th></tr></thead><tbody>'+
+    txns.map(t=>`<tr><td><span class="badge badge-${t.type}">${t.type}</span></td><td style="font-weight:700;color:${t.type==='credit'?'#16a34a':t.type==='hold'?'#d97706':'#2563eb'}">$${Number(t.amount).toFixed(2)}</td><td style="max-width:200px;white-space:normal">${t.reason||'—'}</td><td><span class="badge badge-${t.status}">${t.status}</span></td><td>${new Date(t.created_at).toLocaleString()}</td></tr>`).join('')+
+    '</tbody></table>';
 }
 
-async function doTransfer() {
+function filterTxns(){
+  const q=document.getElementById('txn-search').value.toLowerCase();
+  renderFullTxns(allTxns.filter(t=>(t.reason||'').toLowerCase().includes(q)||t.type.includes(q)||t.status.includes(q)));
+}
+
+async function loadMyTransfers(){
+  const{data}=await sb.from('transfer_requests').select('*').eq('user_id',userId).order('created_at',{ascending:false}).limit(5);
+  const el=document.getElementById('my-transfers-list');
+  if(!data||!data.length){el.innerHTML='<div class="empty" style="padding:14px;font-size:12px">No transfer requests yet.</div>';return;}
+  el.innerHTML=data.map(t=>`
+    <div style="padding:10px 0;border-bottom:1px solid #f8fafc;display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:#0f2356;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.recipient_name} · ${t.bank_name}</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px">${new Date(t.created_at).toLocaleDateString()}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-weight:700;color:#0f2356">$${Number(t.amount).toFixed(2)}</div>
+        <span class="badge badge-${t.status}" style="font-size:10px">${t.status}</span>
+      </div>
+    </div>`).join('');
+}
+
+async function loadTickets(){
+  const{data}=await sb.from('support_tickets').select('*').eq('user_id',userId).order('created_at',{ascending:false});
+  const el=document.getElementById('tickets-body');
+  if(!data||!data.length){el.innerHTML='<div class="empty">No support tickets yet.</div>';return;}
+  el.innerHTML='<table class="tbl"><thead><tr><th>Subject</th><th>Category</th><th>Status</th><th>Admin Reply</th><th>Date</th></tr></thead><tbody>'+
+    data.map(t=>`<tr><td style="font-weight:600;max-width:200px;white-space:normal">${t.subject}</td><td>${t.category}</td><td><span class="badge badge-${t.status}">${t.status.replace('_',' ')}</span></td><td style="max-width:200px;white-space:normal;font-size:12px;color:#64748b">${t.admin_reply||'—'}</td><td>${new Date(t.created_at).toLocaleDateString()}</td></tr>`).join('')+
+    '</tbody></table>';
+}
+
+function openProfileModal(){
+  if(!userProfile)return;
+  document.getElementById('profile-body').innerHTML=`
+    <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" type="text" id="prof-name" value="${userProfile.full_name||''}"></div>
+    <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" value="${userProfile.email}" disabled style="opacity:.6"></div>
+    <div class="form-group"><label class="form-label">Phone</label><input class="form-input" type="tel" id="prof-phone" value="${userProfile.phone||''}"></div>
+    <div style="background:#f8fafc;border:1.5px solid var(--border);border-radius:8px;padding:14px;font-size:13px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--muted)">Account Number</span><strong style="font-family:monospace">${userProfile.account_number||'—'}</strong></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--muted)">KYC Status</span><span class="badge badge-${userProfile.kyc_status||'unverified'}">${userProfile.kyc_status||'unverified'}</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Member Since</span><strong>${new Date(userProfile.created_at).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</strong></div>
+    </div>`;
+}
+
+async function saveProfile(){
+  const name=document.getElementById('prof-name')?.value.trim();
+  const phone=document.getElementById('prof-phone')?.value.trim();
+  const{error}=await sb.from('profiles').update({full_name:name,phone:phone,updated_at:new Date().toISOString()}).eq('id',userId);
+  if(error){alert('Error saving: '+error.message);return;}
+  closeModal('modal-profile');
+  location.reload();
+}
+
+async function doTransfer(){
   const name=document.getElementById('tf-name').value.trim();
   const account=document.getElementById('tf-account').value.trim();
   const bank=document.getElementById('tf-bank').value.trim();
   const amount=parseFloat(document.getElementById('tf-amount').value);
   const reason=document.getElementById('tf-reason').value.trim();
-  if(!name||!account||!bank){showAlert('tf-err','Please fill in all recipient details');return;}
+  if(!name||!account||!bank){showAlert('tf-err','Please fill all recipient details');return;}
   if(!amount||amount<=0){showAlert('tf-err','Enter a valid amount');return;}
   setLoading('tf-btn',true,'Submitting...');
-  const {error}=await sb.from('transfer_requests').insert({user_id:userId,amount,recipient_name:name,recipient_account:account,bank_name:bank,reason});
+  const{error}=await sb.from('transfer_requests').insert({user_id:userId,amount,recipient_name:name,recipient_account:account,bank_name:bank,reason});
   setLoading('tf-btn',false,'Submit Request');
   if(error){showAlert('tf-err',error.message);return;}
   showAlert('tf-ok','Transfer request submitted! Awaiting admin approval.');
-  document.getElementById('tf-name').value=''; document.getElementById('tf-account').value='';
-  document.getElementById('tf-bank').value=''; document.getElementById('tf-amount').value=''; document.getElementById('tf-reason').value='';
+  ['tf-name','tf-account','tf-bank','tf-amount','tf-reason'].forEach(id=>document.getElementById(id).value='');
   setTimeout(()=>closeModal('modal-transfer'),2500);
+  loadMyTransfers();
 }
 
-async function doLoan() {
+async function doQuickTransfer(){
+  const name=document.getElementById('qt-name').value.trim();
+  const account=document.getElementById('qt-account').value.trim();
+  const amount=parseFloat(document.getElementById('qt-amount').value);
+  const bank=document.getElementById('qt-bank').value.trim();
+  if(!name||!account||!bank){showAlert('qt-err','Please fill all fields');return;}
+  if(!amount||amount<=0){showAlert('qt-err','Enter valid amount');return;}
+  const{error}=await sb.from('transfer_requests').insert({user_id:userId,amount,recipient_name:name,recipient_account:account,bank_name:bank,reason:'Quick transfer'});
+  if(error){showAlert('qt-err',error.message);return;}
+  showAlert('qt-ok','Transfer submitted for approval!');
+  ['qt-name','qt-account','qt-amount','qt-bank'].forEach(id=>document.getElementById(id).value='');
+  loadMyTransfers();
+}
+
+async function doLoan(){
   const amount=parseFloat(document.getElementById('ln-amount').value);
   const term=parseInt(document.getElementById('ln-term').value);
   const purpose=document.getElementById('ln-purpose').value.trim();
   const income=parseFloat(document.getElementById('ln-income').value)||null;
-  if(!amount||amount<100){showAlert('ln-err','Minimum loan amount is $100');return;}
-  if(!purpose){showAlert('ln-err','Please describe the purpose of the loan');return;}
+  if(!amount||amount<100){showAlert('ln-err','Minimum loan is $100');return;}
+  if(!purpose){showAlert('ln-err','Please describe the loan purpose');return;}
   setLoading('ln-btn',true,'Submitting...');
-  const {error}=await sb.from('loan_applications').insert({user_id:userId,amount,term_months:term,purpose,monthly_income:income});
+  const{error}=await sb.from('loan_applications').insert({user_id:userId,amount,term_months:term,purpose,monthly_income:income});
   setLoading('ln-btn',false,'Submit Application');
   if(error){showAlert('ln-err',error.message);return;}
-  showAlert('ln-ok','Loan application submitted! We will review it shortly.');
+  showAlert('ln-ok','Loan application submitted! We\'ll review it shortly.');
   setTimeout(()=>closeModal('modal-loan'),2500);
 }
 
-async function doTicket() {
+async function doTicket(){
   const category=document.getElementById('tk-category').value;
   const subject=document.getElementById('tk-subject').value.trim();
   const message=document.getElementById('tk-message').value.trim();
   if(!subject){showAlert('tk-err','Please enter a subject');return;}
   if(!message){showAlert('tk-err','Please describe your issue');return;}
   setLoading('tk-btn',true,'Submitting...');
-  const {error}=await sb.from('support_tickets').insert({user_id:userId,category,subject,message});
+  const{error}=await sb.from('support_tickets').insert({user_id:userId,category,subject,message});
   setLoading('tk-btn',false,'Submit Ticket');
   if(error){showAlert('tk-err',error.message);return;}
   showAlert('tk-ok','Support ticket created! We\'ll respond shortly.');
   setTimeout(()=>closeModal('modal-ticket'),2500);
 }
 
-function openModal(id){document.getElementById(id).classList.add('open');document.body.style.overflow='hidden'}
-function closeModal(id){document.getElementById(id).classList.remove('open');document.body.style.overflow=''}
-function showAlert(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display='block';setTimeout(()=>el.style.display='none',5000)}
-function setLoading(id,loading,text){const b=document.getElementById(id);if(b){b.disabled=loading;b.textContent=text}}
-function doLogout(){sb.auth.signOut().then(()=>window.location.replace('/login'))}
-document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)closeModal(o.id)}));
+function startClock(){
+  function tick(){
+    const now=new Date();
+    const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const h=now.getHours();
+    const timeStr=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+':'+String(now.getSeconds()).padStart(2,'0');
+    const dateStr=days[now.getDay()]+', '+months[now.getMonth()]+' '+now.getDate()+', '+now.getFullYear();
+    const shortDate=days[now.getDay()]+', '+months[now.getMonth()]+' '+now.getDate()+', '+now.getFullYear();
+    const greeting=h<12?'Good Morning':h<17?'Good Afternoon':'Good Evening';
+    document.getElementById('bc-clock').textContent=timeStr;
+    document.getElementById('bc-date').textContent=dateStr;
+    document.getElementById('topbar-date').textContent=shortDate;
+    document.getElementById('bc-greeting').textContent=greeting;
+  }
+  tick();setInterval(tick,1000);
+}
+
+function showSection(id,el){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('section-'+id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(el)el.classList.add('active');
+  if(id==='tickets')loadTickets();
+  closeSidebar();
+  return false;
+}
+function openModal(id){
+  document.getElementById(id).classList.add('open');
+  document.body.style.overflow='hidden';
+  if(id==='modal-profile')openProfileModal();
+}
+function closeModal(id){document.getElementById(id).classList.remove('open');document.body.style.overflow='';}
+function showAlert(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display='block';setTimeout(()=>el.style.display='none',5000);}
+function setLoading(id,loading,text){const b=document.getElementById(id);if(b){b.disabled=loading;b.textContent=text;}}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('mob-backdrop').classList.toggle('show');}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('mob-backdrop').classList.remove('show');}
+function doLogout(){sb.auth.signOut().then(()=>window.location.replace('/login'));}
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)closeModal(o.id);}));
 
 init();
 </script>
