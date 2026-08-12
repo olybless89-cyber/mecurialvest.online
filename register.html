@@ -473,7 +473,7 @@
                 
                 <!-- Form Container -->
                 <div class="px-8 py-6">
-                    <form action="register.html" method="post" id="registration-form">
+                    <form id="registration-form">
                         <input type="hidden" name="_token" value="fyvqeww0bliJ8cZ6JrFX7XfjJ3wNC5FnSHWwh0EB">                        
                         <!-- Step 1: Personal Information -->
                         <div x-show="step === 1" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
@@ -1264,70 +1264,93 @@
     });
 </script>
 
+
+
+<!-- Supabase Auth -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const SUPA_URL = "https://uatnxwvkpuvxvgngxxez.supabase.co";
-const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhdG54d3ZrcHV2eHZnbmd4eGV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1NjM1OTAsImV4cCI6MjEwMjEzOTU5MH0.l0X90PCIpX4OZoU1yTEpuh3Ro7ZqkP79KCFiH3RQ_lI";
-const supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+(function() {
+  var SUPA_URL = "https://uatnxwvkpuvxvgngxxez.supabase.co";
+  var SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhdG54d3ZrcHV2eHZnbmd4eGV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1NjM1OTAsImV4cCI6MjEwMjEzOTU5MH0.l0X90PCIpX4OZoU1yTEpuh3Ro7ZqkP79KCFiH3RQ_lI";
+  var sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 
-document.addEventListener("DOMContentLoaded", () => {
-  const form = document.getElementById("registration-form") || document.querySelector("form");
-  if (!form) return;
-
-  const showErr = (msg) => {
-    let d = document.getElementById("auth-error");
+  function showMsg(type, msg) {
+    var id = type === "ok" ? "auth-ok" : "auth-error";
+    var color = type === "ok" ? "#16a34a" : "#dc2626";
+    var bg = type === "ok" ? "#f0fdf4" : "#fef2f2";
+    var border = type === "ok" ? "#bbf7d0" : "#fecaca";
+    var d = document.getElementById(id);
     if (!d) {
       d = document.createElement("div");
-      d.id = "auth-error";
-      d.style = "color:#dc2626;background:#fef2f2;border:1px solid #fecaca;padding:10px 16px;border-radius:6px;margin:12px 0;font-size:14px;";
-      form.prepend(d);
+      d.id = id;
+      d.style.cssText = "padding:10px 16px;border-radius:6px;margin:12px 0;font-size:14px;border:1px solid;";
+      var form = document.getElementById("registration-form");
+      if (form) form.prepend(d);
     }
+    d.style.color = color; d.style.background = bg; d.style.borderColor = border;
     d.textContent = msg; d.style.display = "block";
-    setTimeout(() => d.style.display = "none", 5000);
-  };
-  const showOk = (msg) => {
-    let d = document.getElementById("auth-ok");
-    if (!d) {
-      d = document.createElement("div");
-      d.id = "auth-ok";
-      d.style = "color:#16a34a;background:#f0fdf4;border:1px solid #bbf7d0;padding:10px 16px;border-radius:6px;margin:12px 0;font-size:14px;";
-      form.prepend(d);
+    if (type === "ok") setTimeout(function() { d.style.display = "none"; }, 6000);
+    else setTimeout(function() { d.style.display = "none"; }, 5000);
+  }
+
+  function getFieldValue(selectors) {
+    for (var i = 0; i < selectors.length; i++) {
+      var el = document.querySelector(selectors[i]);
+      if (el && el.value && el.value.trim()) return el.value.trim();
     }
-    d.textContent = msg; d.style.display = "block";
-  };
+    return "";
+  }
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const emailEl = form.querySelector("[type=email],[name=email],[id=email]");
-    const pwEl = form.querySelector("[type=password],[name=password],[id=password]");
-    const nameEl = form.querySelector("[name=name],[id=name],[placeholder*=First],[placeholder*=first]");
-    const lastEl = form.querySelector("[name=lastname],[id=lastname]");
+  function waitForForm() {
+    var form = document.getElementById("registration-form");
+    if (!form) { setTimeout(waitForForm, 300); return; }
 
-    if (!emailEl || !pwEl) { showErr("Could not find email/password fields."); return; }
-    const email = emailEl.value.trim();
-    const password = pwEl.value;
-    const fullName = [(nameEl?.value||"").trim(), (lastEl?.value||"").trim()].filter(Boolean).join(" ");
+    form.addEventListener("submit", function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
 
-    if (!email || !password) { showErr("Email and password are required."); return; }
-    if (password.length < 6) { showErr("Password must be at least 6 characters."); return; }
+      // Get email from visible input OR hidden input (Alpine populates hidden inputs)
+      var email = getFieldValue(['input[name="email"][type="hidden"]', '#email', 'input[type="email"]', 'input[name="email"]']);
+      var password = getFieldValue(['input[name="password"][type="hidden"]', '#password', 'input[name="password"]']);
+      var firstName = getFieldValue(['input[name="name"]', '#name', 'input[placeholder*="First"]']);
+      var lastName = getFieldValue(['input[name="lastname"]', '#lastname']);
+      var fullName = [firstName, lastName].filter(Boolean).join(" ");
 
-    const submitBtn = form.querySelector("[type=submit]");
-    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Creating account..."; }
+      if (!email) { showMsg("err", "Email is required. Please complete step 2 of the form."); return; }
+      if (!password || password.length < 6) { showMsg("err", "Password must be at least 6 characters. Please complete step 4."); return; }
 
-    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName } } });
-    if (error) {
-      showErr(error.message);
-      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Create Account"; }
-      return;
-    }
-    // Update profile with full name
-    if (data.user && fullName) {
-      await supabase.from("profiles").update({ full_name: fullName }).eq("id", data.user.id);
-    }
-    showOk("Account created successfully! Redirecting to login...");
-    setTimeout(() => window.location.href = "login", 2000);
-  });
-});
+      var btn = form.querySelector("[type=submit], .submit-btn");
+      if (btn) { btn.disabled = true; btn.textContent = "Creating account..."; }
+
+      sb.auth.signUp({
+        email: email,
+        password: password,
+        options: { data: { full_name: fullName } }
+      }).then(function(res) {
+        if (res.error) {
+          showMsg("err", res.error.message);
+          if (btn) { btn.disabled = false; btn.textContent = "Submit"; }
+          return;
+        }
+        if (res.data.user && fullName) {
+          sb.from("profiles").update({ full_name: fullName }).eq("id", res.data.user.id);
+        }
+        showMsg("ok", "Account created! Redirecting to login...");
+        setTimeout(function() { window.location.href = "/login"; }, 2000);
+      });
+
+      return false;
+    }, true);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", waitForForm);
+  } else {
+    waitForForm();
+  }
+})();
 </script>
+
 </body>
 </html>

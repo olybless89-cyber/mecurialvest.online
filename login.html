@@ -409,7 +409,7 @@
                 
                 <!-- Login Form -->
                 <div class="px-8 pb-8">
-                    <form method="POST" action="login.html">
+                    <form id="login-form">
                         <input type="hidden" name="_token" value="2hoDf59Dlu7Cr56alOykffLtpMZ0ko3F9Z4yW89v">                        
                         <!-- Email -->
                         <div class="mb-6">
@@ -553,8 +553,7 @@
     }
 </script>
 
-<!-- Supabase Auth -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
 const SUPA_URL = "https://uatnxwvkpuvxvgngxxez.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhdG54d3ZrcHV2eHZnbmd4eGV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1NjM1OTAsImV4cCI6MjEwMjEzOTU5MH0.l0X90PCIpX4OZoU1yTEpuh3Ro7ZqkP79KCFiH3RQ_lI";
@@ -605,5 +604,87 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 </script>
+
+<!-- Supabase Auth -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function() {
+  var SUPA_URL = "https://uatnxwvkpuvxvgngxxez.supabase.co";
+  var SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhdG54d3ZrcHV2eHZnbmd4eGV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1NjM1OTAsImV4cCI6MjEwMjEzOTU5MH0.l0X90PCIpX4OZoU1yTEpuh3Ro7ZqkP79KCFiH3RQ_lI";
+  var sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+
+  // Redirect if already logged in
+  sb.auth.getSession().then(function(res) {
+    var session = res.data.session;
+    if (session) {
+      sb.from("profiles").select("role").eq("id", session.user.id).single().then(function(r) {
+        window.location.href = (r.data && r.data.role === "admin") ? "/admin" : "/dashboard";
+      });
+    }
+  });
+
+  function showError(form, msg) {
+    var d = document.getElementById("auth-error");
+    if (!d) {
+      d = document.createElement("div");
+      d.id = "auth-error";
+      d.style.cssText = "color:#dc2626;background:#fef2f2;border:1px solid #fecaca;padding:10px 16px;border-radius:6px;margin-bottom:12px;font-size:14px;";
+      var firstField = form.querySelector("input");
+      if (firstField) firstField.parentNode.parentNode.insertBefore(d, firstField.parentNode);
+      else form.prepend(d);
+    }
+    d.textContent = msg;
+    d.style.display = "block";
+  }
+
+  function waitForForm() {
+    var form = document.getElementById("login-form") || document.querySelector("form");
+    if (!form) { setTimeout(waitForForm, 200); return; }
+
+    form.addEventListener("submit", function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
+      var emailEl = document.getElementById("email") || form.querySelector("[type=email]");
+      var pwEl = document.getElementById("password") || form.querySelector("[type=password]");
+      var btn = form.querySelector("[type=submit], button[type=submit]");
+
+      if (!emailEl || !pwEl) { showError(form, "Form fields not found."); return; }
+      var email = emailEl.value.trim();
+      var password = pwEl.value;
+      if (!email || !password) { showError(form, "Email and password are required."); return; }
+
+      if (btn) { btn.disabled = true; btn.textContent = "Signing in..."; }
+
+      sb.auth.signInWithPassword({ email: email, password: password }).then(function(res) {
+        if (res.error) {
+          showError(form, res.error.message);
+          if (btn) { btn.disabled = false; btn.textContent = "Sign In"; }
+          return;
+        }
+        sb.from("profiles").select("role,status").eq("id", res.data.user.id).single().then(function(r) {
+          if (r.data && r.data.status === "inactive") {
+            sb.auth.signOut();
+            showError(form, "Your account has been deactivated. Please contact support.");
+            if (btn) { btn.disabled = false; btn.textContent = "Sign In"; }
+            return;
+          }
+          window.location.href = (r.data && r.data.role === "admin") ? "/admin" : "/dashboard";
+        });
+      });
+
+      return false;
+    }, true);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", waitForForm);
+  } else {
+    waitForForm();
+  }
+})();
+</script>
+
 </body>
 </html>
