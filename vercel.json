@@ -1,27 +1,26 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "index.php",
-      "use": "@vercel/php"
-    }
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/business", "destination": "/business.html" },
+    { "source": "/personal", "destination": "/personal.html" },
+    { "source": "/cards", "destination": "/cards.html" },
+    { "source": "/loans", "destination": "/loans.html" },
+    { "source": "/contact", "destination": "/contact.html" },
+    { "source": "/login", "destination": "/login.html" },
+    { "source": "/register", "destination": "/register.html" },
+    { "source": "/about", "destination": "/about.html" },
+    { "source": "/faq", "destination": "/faq.html" },
+    { "source": "/apps", "destination": "/apps.html" },
+    { "source": "/privacy-policy", "destination": "/privacy-policy.html" },
+    { "source": "/terms-of-service", "destination": "/terms-of-service.html" }
   ],
-  "routes": [
+  "headers": [
     {
-      "src": "/temp/(.*)",
-      "dest": "/temp/$1"
-    },
-    {
-      "src": "/storage/(.*)",
-      "dest": "/storage/$1"
-    },
-    {
-      "src": "/(.*\\.css|.*\\.js|.*\\.png|.*\\.jpg|.*\\.gif|.*\\.svg|.*\\.ico|.*\\.woff|.*\\.woff2|.*\\.ttf)",
-      "dest": "/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.php"
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
+      ]
     }
   ]
 }
