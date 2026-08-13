@@ -208,6 +208,11 @@ body{font-family:'Inter',sans-serif;background:#0b1120;color:#e2e8f0;min-height:
       </a>
 
       <div class="nav-section">Approvals</div>
+      <a class="nav-item" onclick="showSection('deposits')" href="#">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Deposits
+        <span class="nav-badge" id="nb-deposits">0</span>
+      </a>
       <a class="nav-item" onclick="showSection('transfers')" href="#">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         Transfers
@@ -292,6 +297,12 @@ body{font-family:'Inter',sans-serif;background:#0b1120;color:#e2e8f0;min-height:
             <div class="stat-value" id="s-pending-loans">—</div>
             <div class="stat-sub">Awaiting review</div>
             <div class="stat-icon">📋</div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-label">Pending Deposits</div>
+            <div class="stat-value" id="s-pending-deposits">—</div>
+            <div class="stat-sub">Awaiting approval</div>
+            <div class="stat-icon">💵</div>
           </div>
           <div class="stat-card red">
             <div class="stat-label">Open Tickets</div>
@@ -415,6 +426,32 @@ body{font-family:'Inter',sans-serif;background:#0b1120;color:#e2e8f0;min-height:
                 <th>Status</th><th>Date</th><th>Actions</th>
               </tr></thead>
               <tbody id="tickets-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ DEPOSITS ═══════════ -->
+      <div class="section" id="section-deposits">
+        <div class="section-title">Deposit Requests</div>
+        <div class="section-sub">Review and approve or reject user deposit requests.</div>
+        <div class="table-wrap">
+          <div class="table-header">
+            <h3>Deposit Requests</h3>
+            <select id="deposit-filter" class="search-box" style="width:160px" onchange="loadDeposits()">
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="">All</option>
+            </select>
+          </div>
+          <div class="overflow-x">
+            <table class="tbl">
+              <thead><tr>
+                <th>User</th><th>Amount</th><th>Method</th><th>Reference</th>
+                <th>Status</th><th>Date</th><th>Actions</th>
+              </tr></thead>
+              <tbody id="deposits-tbody"></tbody>
             </table>
           </div>
         </div>
@@ -547,6 +584,23 @@ body{font-family:'Inter',sans-serif;background:#0b1120;color:#e2e8f0;min-height:
   </div>
 </div>
 
+<!-- Deposit Review Modal -->
+<div class="modal-overlay" id="modal-deposit-review">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Review Deposit Request</div><button class="modal-close" onclick="closeModal('modal-deposit-review')">✕</button></div>
+    <div class="modal-body">
+      <div class="alert alert-err" id="dr-err"></div>
+      <div id="dr-details" style="background:#0b1120;border:1px solid #1e2d4a;border-radius:8px;padding:16px;margin-bottom:16px;font-size:13px;color:#94a3b8;line-height:1.8"></div>
+      <div class="form-group"><label class="form-label">Admin Note (optional)</label><textarea class="form-textarea" id="dr-note" placeholder="Reason for approval/rejection..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-deposit-review')">Cancel</button>
+      <button class="btn btn-danger" onclick="doDepositReview('rejected')" id="dr-reject-btn">Reject</button>
+      <button class="btn btn-success" onclick="doDepositReview('approved')" id="dr-approve-btn">Approve & Credit</button>
+    </div>
+  </div>
+</div>
+
 <!-- Transfer Review Modal -->
 <div class="modal-overlay" id="modal-transfer-review">
   <div class="modal">
@@ -631,7 +685,7 @@ async function init() {
 }
 
 async function loadAll() {
-  await Promise.all([loadStats(), loadUsers(), loadTransfers(), loadLoans(), loadTickets(), loadTxns()]);
+  await Promise.all([loadStats(), loadUsers(), loadDeposits(), loadTransfers(), loadLoans(), loadTickets(), loadTxns()]);
 }
 
 // ── Stats ─────────────────────────────────────────────
@@ -642,6 +696,7 @@ async function loadStats() {
   document.getElementById('s-active-users').textContent = data.active_users + ' active';
   document.getElementById('s-total-balance').textContent = '$' + Number(data.total_balance).toLocaleString('en',{minimumFractionDigits:2});
   document.getElementById('s-total-held').textContent = '$' + Number(data.total_held).toLocaleString('en',{minimumFractionDigits:2}) + ' held';
+  document.getElementById('s-pending-deposits').textContent = data.pending_deposits || 0;
   document.getElementById('s-pending-transfers').textContent = data.pending_transfers;
   document.getElementById('s-pending-loans').textContent = data.pending_loans;
   document.getElementById('s-open-tickets').textContent = data.open_tickets;
@@ -651,6 +706,8 @@ async function loadStats() {
   document.getElementById('nb-loans').textContent = data.pending_loans;
   document.getElementById('nb-tickets').textContent = data.open_tickets;
   // Hide zero badges
+  document.getElementById('nb-deposits').textContent = data.pending_deposits || 0;
+  document.getElementById('nb-deposits').style.display = (data.pending_deposits||0) === 0 ? 'none' : 'flex';
   ['nb-transfers','nb-loans','nb-tickets'].forEach(id => {
     document.getElementById(id).style.display = document.getElementById(id).textContent === '0' ? 'none' : 'flex';
   });
@@ -801,6 +858,75 @@ async function doRelease(holdId) {
   if (error) { showAlert('release-err', error.message); return; }
   closeModal('modal-release');
   await loadUsers(); await loadStats();
+}
+
+// ── Deposits ─────────────────────────────────────────────
+var selectedDepositId = null;
+var DEP_METHOD_LABELS = { bank_transfer: '🏦 Bank Transfer', paypal: '💳 PayPal', bitcoin: '₿ Bitcoin' };
+
+async function loadDeposits() {
+  const filter = document.getElementById('deposit-filter');
+  const status = filter ? filter.value : 'pending';
+  let q = sb.from('deposit_requests').select('*').order('created_at',{ascending:false});
+  if (status) q = q.eq('status', status);
+  const { data } = await q;
+  const users = {};
+  allUsers.forEach(u => users[u.id] = u.email);
+  const tb = document.getElementById('deposits-tbody');
+  if (!tb) return;
+  if (!data || !data.length) {
+    tb.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-icon">💵</div><div class="empty-text">No deposit requests</div></div></td></tr>';
+    return;
+  }
+  tb.innerHTML = data.map(d => `
+    <tr>
+      <td style="font-weight:600">${users[d.user_id] || d.user_id.substring(0,8)}</td>
+      <td style="font-weight:700;color:#4ade80;font-size:15px">$${Number(d.amount).toFixed(2)}</td>
+      <td>${DEP_METHOD_LABELS[d.method] || d.method}</td>
+      <td style="font-family:monospace;font-size:11px;color:#64748b">${d.reference || '—'}</td>
+      <td><span class="badge badge-${d.status}">${d.status}</span></td>
+      <td>${new Date(d.created_at).toLocaleDateString()}</td>
+      <td>${d.status === 'pending'
+        ? '<button class="btn btn-ghost btn-sm" onclick="openDepositReview(\'' + d.id + '\')">Review</button>'
+        : '<span style="color:#64748b;font-size:12px">Reviewed</span>'}</td>
+    </tr>`).join('');
+}
+
+function openDepositReview(did) {
+  selectedDepositId = did;
+  document.getElementById('dr-err').style.display = 'none';
+  document.getElementById('dr-note').value = '';
+  sb.from('deposit_requests').select('*').eq('id', did).single().then(function(res) {
+    var d = res.data;
+    if (!d) return;
+    var users = {};
+    allUsers.forEach(function(u){ users[u.id] = u.email; });
+    document.getElementById('dr-details').innerHTML =
+      '<div><strong style="color:#e2e8f0">User:</strong> ' + (users[d.user_id] || d.user_id) + '</div>' +
+      '<div><strong style="color:#e2e8f0">Amount:</strong> <span style="color:#4ade80;font-weight:700;font-size:16px">$' + Number(d.amount).toFixed(2) + '</span></div>' +
+      '<div><strong style="color:#e2e8f0">Method:</strong> ' + (DEP_METHOD_LABELS[d.method] || d.method) + '</div>' +
+      '<div><strong style="color:#e2e8f0">Reference:</strong> <code style="font-size:11px">' + (d.reference || '—') + '</code></div>' +
+      '<div><strong style="color:#e2e8f0">Submitted:</strong> ' + new Date(d.created_at).toLocaleString() + '</div>';
+    openModal('modal-deposit-review');
+  });
+}
+
+async function doDepositReview(status) {
+  var note = document.getElementById('dr-note').value.trim();
+  var btnId = status === 'approved' ? 'dr-approve-btn' : 'dr-reject-btn';
+  setLoading(btnId, true, status === 'approved' ? 'Approving...' : 'Rejecting...');
+  var result = await sb.rpc('admin_review_deposit', {
+    deposit_id: selectedDepositId,
+    new_status: status,
+    note: note
+  });
+  setLoading(btnId, false, status === 'approved' ? 'Approve & Credit' : 'Reject');
+  if (result.error) { showAlert('dr-err', result.error.message); return; }
+  closeModal('modal-deposit-review');
+  await loadDeposits();
+  await loadStats();
+  await loadUsers();
+  await loadTxns();
 }
 
 // ── Transfers ─────────────────────────────────────────
@@ -1007,6 +1133,7 @@ function filterTxns() {
 
 // ── UI Helpers ────────────────────────────────────────
 function showSection(id) {
+  if (id === 'deposits') loadDeposits();
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById('section-' + id).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
