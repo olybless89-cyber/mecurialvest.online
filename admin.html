@@ -674,9 +674,9 @@ let selectedTicketId = null;
 // ── Init ──────────────────────────────────────────────
 async function init() {
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) { window.location.replace('/login'); return; }
+  if (!session) { window.location.replace('/admin-login'); return; }
   const { data: profile } = await sb.from('profiles').select('*').eq('id', session.user.id).single();
-  if (!profile || profile.role !== 'admin') { window.location.replace('/dashboard'); return; }
+  if (!profile || profile.role !== 'admin') { window.location.replace('/login'); return; }
   currentUser = profile;
   document.getElementById('admin-name').textContent = profile.full_name || profile.email.split('@')[0];
   document.getElementById('admin-avatar').textContent = (profile.full_name || profile.email)[0].toUpperCase();
