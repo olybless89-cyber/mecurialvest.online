@@ -715,8 +715,19 @@ async function loadStats() {
 
 // ── Users ─────────────────────────────────────────────
 async function loadUsers() {
-  const { data } = await sb.rpc('admin_get_all_users');
-  allUsers = data || [];
+  // Try RPC first; fall back to direct table query if RPC has SQL bug
+  let users = null;
+  const rpcRes = await sb.rpc('admin_get_all_users');
+  if (!rpcRes.error && rpcRes.data) {
+    users = rpcRes.data;
+  } else {
+    // Direct query fallback — works because admin has SECURITY DEFINER access
+    const { data, error } = await sb.from('profiles')
+      .select('id,email,full_name,role,status,balance,held_funds,account_number,kyc_status,phone,transaction_limit,created_at')
+      .order('created_at', { ascending: false });
+    if (!error) users = data;
+  }
+  allUsers = users || [];
   renderUsers(allUsers);
   document.getElementById('user-count').textContent = '(' + allUsers.length + ')';
 }
