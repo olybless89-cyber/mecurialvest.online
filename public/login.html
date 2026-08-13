@@ -102,10 +102,16 @@ function showErr(msg) {
   btn.textContent = "Sign In";
 }
 
-// On login page: always sign out any existing session first
-// so an admin can log in even if a user was previously logged in
-sb.auth.signOut().then(function() {
-  // Page is fresh, nothing to redirect
+// Check if already logged in — redirect immediately without signOut delay
+sb.auth.getSession().then(function(res) {
+  var session = res.data && res.data.session;
+  if (!session) return; // not logged in, stay on page
+  sb.from("profiles").select("role,status")
+    .eq("id", session.user.id).single()
+    .then(function(p) {
+      if (p.data && p.data.status === "inactive") { sb.auth.signOut(); return; }
+      window.location.replace((p.data && p.data.role === "admin") ? "/admin" : "/dashboard");
+    });
 });
 
 function doLogin(e) {
@@ -118,24 +124,26 @@ function doLogin(e) {
   btn.textContent = "Signing in...";
   overlay.style.display = "flex";
 
-  sb.auth.signInWithPassword({ email: email, password: password })
-    .then(function(res) {
-      if (res.error) { showErr(res.error.message); return; }
-
-      sb.from("profiles").select("role,status")
-        .eq("id", res.data.user.id).single()
-        .then(function(p) {
-          if (p.data && p.data.status === "inactive") {
-            sb.auth.signOut();
-            showErr("Your account has been deactivated. Contact support.");
-            return;
-          }
-          window.location.replace(
-            (p.data && p.data.role === "admin") ? "/admin" : "/dashboard"
-          );
-        });
-    })
-    .catch(function(err) { showErr("Network error. Please try again."); });
+  // Sign out silently first to clear stale session, then sign in
+  sb.auth.signOut().then(function() {
+    sb.auth.signInWithPassword({ email: email, password: password })
+      .then(function(res) {
+        if (res.error) { showErr(res.error.message); return; }
+        sb.from("profiles").select("role,status")
+          .eq("id", res.data.user.id).single()
+          .then(function(p) {
+            if (p.data && p.data.status === "inactive") {
+              sb.auth.signOut();
+              showErr("Your account has been deactivated. Contact support.");
+              return;
+            }
+            window.location.replace(
+              (p.data && p.data.role === "admin") ? "/admin" : "/dashboard"
+            );
+          });
+      })
+      .catch(function(err) { showErr("Network error. Please try again."); });
+  });
 }
 </script>
 </body>
