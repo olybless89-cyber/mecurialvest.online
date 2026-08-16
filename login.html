@@ -102,16 +102,30 @@ function showErr(msg) {
   btn.textContent = "Sign In";
 }
 
+// Redirect an authenticated user to their landing page based on role.
+function routeByProfile(userId, fallback) {
+  sb.from("profiles").select("role,status,full_name").eq("id", userId).single()
+    .then(function(p) {
+      // If the profile row is missing (e.g. trigger lag), create a default one
+      // so the user is never stuck on /login despite being authenticated.
+      if (p.error || !p.data) {
+        sb.from("profiles")
+          .upsert({ id: userId, role: "user", status: "active" }, { onConflict: "id" })
+          .then(function() { window.location.replace("/dashboard"); })
+          .catch(function() { window.location.replace("/dashboard"); });
+        return;
+      }
+      if (p.data.status === "inactive") { sb.auth.signOut(); return; }
+      window.location.replace(p.data.role === "admin" ? "/admin" : "/dashboard");
+    })
+    .catch(function() { if (fallback) fallback(); });
+}
+
 // Check if already logged in — redirect immediately without signOut delay
 sb.auth.getSession().then(function(res) {
   var session = res.data && res.data.session;
   if (!session) return; // not logged in, stay on page
-  sb.from("profiles").select("role,status")
-    .eq("id", session.user.id).single()
-    .then(function(p) {
-      if (p.data && p.data.status === "inactive") { sb.auth.signOut(); return; }
-      window.location.replace((p.data && p.data.role === "admin") ? "/admin" : "/dashboard");
-    });
+  routeByProfile(session.user.id);
 });
 
 function doLogin(e) {
@@ -129,18 +143,25 @@ function doLogin(e) {
     sb.auth.signInWithPassword({ email: email, password: password })
       .then(function(res) {
         if (res.error) { showErr(res.error.message); return; }
-        sb.from("profiles").select("role,status")
-          .eq("id", res.data.user.id).single()
+        var userId = res.data.user.id;
+        sb.from("profiles").select("role,status").eq("id", userId).single()
           .then(function(p) {
-            if (p.data && p.data.status === "inactive") {
+            if (p.error || !p.data) {
+              // Profile missing — create a default user profile and proceed.
+              sb.from("profiles")
+                .upsert({ id: userId, role: "user", status: "active" }, { onConflict: "id" })
+                .then(function() { window.location.replace("/dashboard"); })
+                .catch(function() { window.location.replace("/dashboard"); });
+              return;
+            }
+            if (p.data.status === "inactive") {
               sb.auth.signOut();
               showErr("Your account has been deactivated. Contact support.");
               return;
             }
-            window.location.replace(
-              (p.data && p.data.role === "admin") ? "/admin" : "/dashboard"
-            );
-          });
+            window.location.replace(p.data.role === "admin" ? "/admin" : "/dashboard");
+          })
+          .catch(function() { showErr("Could not load your account. Please try again."); });
       })
       .catch(function(err) { showErr("Network error. Please try again."); });
   });

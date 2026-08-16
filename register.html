@@ -146,11 +146,26 @@ function doRegister(e) {
   sb.auth.signUp({ email: email, password: pw, options: { data: { full_name: fullName } } })
     .then(function(res) {
       if (res.error) { showErr(res.error.message); return; }
-      if (res.data.user && fullName) {
-        sb.from("profiles").update({ full_name: fullName }).eq("id", res.data.user.id);
-      }
-      showOk("Account created! Redirecting to login...");
-      setTimeout(function() { window.location.replace("/login"); }, 2000);
+      var user = res.data && res.data.user;
+      if (!user) { showErr("Unexpected response. Please try again."); return; }
+
+      // Ensure a profile row exists for the new user. The DB trigger usually
+      // creates one, but we upsert defensively (awaited) so a missing row or a
+      // name update race never leaves the account half-created.
+      sb.from("profiles")
+        .upsert(
+          { id: user.id, email: email, full_name: fullName, role: "user", status: "active" },
+          { onConflict: "id" }
+        )
+        .then(function() {
+          showOk("Account created! Redirecting to login...");
+          setTimeout(function() { window.location.replace("/login"); }, 1500);
+        })
+        .catch(function() {
+          // Profile write failed (e.g. RLS), but the auth account was created.
+          showOk("Account created! Redirecting to login...");
+          setTimeout(function() { window.location.replace("/login"); }, 1500);
+        });
     })
     .catch(function() { showErr("Network error. Please try again."); });
 }
