@@ -145,29 +145,63 @@ function doRegister(e) {
 
   sb.auth.signUp({ email: email, password: pw, options: { data: { full_name: fullName } } })
     .then(function(res) {
-      if (res.error) { showErr(res.error.message); return; }
+      if (res.error) { showErr(res.error.message); resetBtn(); return; }
       var user = res.data && res.data.user;
-      if (!user) { showErr("Unexpected response. Please try again."); return; }
+      if (!user) { showErr("Unexpected response. Please try again."); resetBtn(); return; }
 
-      // Ensure a profile row exists for the new user. The DB trigger usually
-      // creates one, but we upsert defensively (awaited) so a missing row or a
-      // name update race never leaves the account half-created.
-      sb.from("profiles")
-        .upsert(
-          { id: user.id, email: email, full_name: fullName, role: "user", status: "active" },
-          { onConflict: "id" }
-        )
-        .then(function() {
-          showOk("Account created! Redirecting to login...");
-          setTimeout(function() { window.location.replace("/login"); }, 1500);
-        })
-        .catch(function() {
-          // Profile write failed (e.g. RLS), but the auth account was created.
-          showOk("Account created! Redirecting to login...");
-          setTimeout(function() { window.location.replace("/login"); }, 1500);
-        });
+      // The signUp call already established a session (auto-login) when email
+      // confirmation is off. Drop the welcome email into the user's inbox, then
+      // send them straight to the dashboard where it's visible in Webmail.
+      sendWelcomeMail(user.id, fullName, email);
     })
-    .catch(function() { showErr("Network error. Please try again."); });
+    .catch(function() { showErr("Network error. Please try again."); resetBtn(); });
+}
+
+function resetBtn() {
+  btn.disabled = false;
+  btn.textContent = "Create Account";
+  overlay.style.display = "none";
+}
+
+// Drop a welcome email into the user's inbox (stored as a resolved support
+// ticket owned by the user, with the message body in admin_reply so it reads
+// as mail "from" the bank). Failures are non-fatal — the account is already
+// created; we just don't want a missing welcome row to block login.
+function sendWelcomeMail(uid, name, email) {
+  var acct = "MV" + uid.replace(/-/g, "").slice(0, 8).toUpperCase();
+  var body =
+    "Welcome to MercurialVest Bank, " + name + "!\n\n" +
+    "Your account has been successfully created. Here are your details:\n" +
+    "  • Email: " + email + "\n" +
+    "  • Account Number: " + acct + "\n" +
+    "  • Status: Active\n\n" +
+    "You can now sign in to your dashboard to explore your account, request " +
+    "transfers, deposits, and loans, or reach our support team.\n\n" +
+    "A few things to get you started:\n" +
+    "  1. Complete KYC verification to unlock higher transaction limits.\n" +
+    "  2. Fund your account via the Deposit page.\n" +
+    "  3. Visit the Webmail section anytime to view messages and notifications " +
+    "from us — you're reading your first one right now.\n\n" +
+    "Thank you for banking with MercurialVest.\n\n" +
+    "— The MercurialVest Team";
+  sb.from("support_tickets")
+    .insert({
+      user_id: uid,
+      category: "account",
+      subject: "Welcome to MercurialVest Bank — Your Account is Ready",
+      message: "Welcome email",
+      admin_reply: body,
+      status: "closed"
+    })
+    .then(function() { finishRegister(); })
+    .catch(function() { finishRegister(); });
+}
+
+function finishRegister() {
+  showOk("Account created! Redirecting to your dashboard...");
+  // signUp already logged the user in, so go straight to the dashboard where
+  // the welcome email is visible in the Webmail section.
+  setTimeout(function() { window.location.replace("/dashboard"); }, 1500);
 }
 </script>
 </body>

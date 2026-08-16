@@ -51,8 +51,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .date-display{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
 .topbar-right{display:flex;align-items:center;gap:12px}
 .balance-pill{background:var(--blue);color:#fff;padding:8px 16px;border-radius:24px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
-.notif-btn{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:.15s}
+.notif-btn{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:.15s;position:relative}
 .notif-btn:hover{border-color:var(--blue);color:var(--blue)}
+.notif-badge{position:absolute;top:-3px;right:-3px;background:#ef4444;color:#fff;font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid var(--white)}
 
 /* ── PAGE ── */
 .page-content{flex:1;padding:24px 28px;overflow-y:auto}
@@ -187,6 +188,61 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .spinner{width:42px;height:42px;border:4px solid #dbeafe;border-top:4px solid var(--blue);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .empty{text-align:center;padding:32px;color:#94a3b8;font-size:13px}
+
+/* ── Nav badge ── */
+.nav-badge{margin-left:auto;background:var(--blue);color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 5px}
+
+/* ── Notification bell ── */
+.notif-wrap{position:relative}
+.notif-dropdown{position:absolute;top:46px;right:0;width:340px;max-height:420px;overflow-y:auto;background:var(--white);border:1.5px solid var(--border);border-radius:14px;box-shadow:0 16px 48px rgba(15,35,86,.16);z-index:300;display:none}
+.notif-dropdown.open{display:block}
+.notif-head{padding:14px 16px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between}
+.notif-head strong{font-size:13px;color:var(--navy)}
+.notif-item{padding:12px 16px;border-bottom:1px solid #f8fafc;cursor:pointer;transition:.12s;display:block;text-decoration:none;color:inherit}
+.notif-item:hover{background:#eff6ff}
+.notif-item.unread{background:#f5f9ff}
+.notif-item.unread .notif-dot{display:inline-block}
+.notif-dot{display:none;width:8px;height:8px;border-radius:50%;background:var(--blue);margin-right:8px;vertical-align:middle}
+.notif-subj{font-size:13px;font-weight:600;color:var(--navy);margin-bottom:2px}
+.notif-prev{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.notif-time{font-size:11px;color:#94a3b8;margin-top:3px}
+.notif-empty{padding:28px 16px;text-align:center;color:#94a3b8;font-size:13px}
+.notif-foot{padding:10px 16px;border-top:1px solid #f1f5f9;text-align:center}
+.notif-foot a{font-size:12px;font-weight:600;color:var(--blue);text-decoration:none}
+
+/* ── Webmail ── */
+.mail-layout{display:grid;grid-template-columns:380px 1fr;gap:18px;height:calc(100vh - 160px);min-height:480px}
+@media(max-width:900px){.mail-layout{grid-template-columns:1fr;height:auto}}
+.mail-list{background:var(--white);border:1.5px solid var(--border);border-radius:14px;overflow-y:auto;display:flex;flex-direction:column}
+.mail-list-head{padding:14px 16px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:0;background:var(--white);z-index:2}
+.mail-list-head h3{font-size:14px;font-weight:700;color:var(--navy)}
+.mail-filter{display:flex;gap:4px}
+.mail-tab{font-size:11px;font-weight:600;color:var(--muted);background:#f1f5f9;border:none;border-radius:7px;padding:5px 10px;cursor:pointer;transition:.12s}
+.mail-tab.active{background:var(--blue);color:#fff}
+.mail-item{padding:13px 16px;border-bottom:1px solid #f8fafc;cursor:pointer;transition:.12s;border-left:3px solid transparent}
+.mail-item:hover{background:#f8fafc}
+.mail-item.selected{background:#eff6ff;border-left-color:var(--blue)}
+.mail-item.unread .mail-from{font-weight:800;color:var(--navy)}
+.mail-item.unread .mail-unread-dot{display:inline-block}
+.mail-unread-dot{display:none;width:8px;height:8px;border-radius:50%;background:var(--blue);margin-right:7px;vertical-align:middle}
+.mail-from{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mail-from .mail-cat{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;background:#eff6ff;color:#2563eb;padding:2px 7px;border-radius:10px}
+.mail-subj{font-size:13px;color:var(--navy);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px}
+.mail-prev{font-size:12px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mail-date{font-size:11px;color:#94a3b8;flex-shrink:0}
+.mail-pane{background:var(--white);border:1.5px solid var(--border);border-radius:14px;display:flex;flex-direction:column;overflow:hidden}
+.mail-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#94a3b8;gap:10px;padding:32px;text-align:center}
+.mail-empty .mail-empty-icon{font-size:42px;opacity:.5}
+.mail-read-head{padding:20px 24px 16px;border-bottom:1px solid #f1f5f9}
+.mail-read-subj{font-size:18px;font-weight:800;color:var(--navy);margin-bottom:10px}
+.mail-read-meta{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+.mail-read-meta .avatar{width:34px;height:34px;font-size:13px}
+.mail-read-meta strong{color:var(--navy);font-weight:700}
+.mail-read-body{padding:20px 24px;overflow-y:auto;flex:1;font-size:14px;line-height:1.7;color:var(--text);white-space:pre-wrap;word-break:break-word}
+.mail-read-actions{padding:14px 24px;border-top:1px solid #f1f5f9;display:flex;gap:10px;flex-wrap:wrap}
+.mail-tag-in,.mail-tag-out{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.4px}
+.mail-tag-in{background:#dcfce7;color:#166534}
+.mail-tag-out{background:#dbeafe;color:#1e40af}
 .mob-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:150}
 @media(max-width:900px){.mob-backdrop.show{display:block}}
 footer{background:var(--white);border-top:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--muted)}
@@ -263,6 +319,11 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:14px 2
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       Support
     </a>
+    <a class="nav-item" href="#" onclick="showSection('webmail',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+      Webmail
+      <span class="nav-badge" id="nav-mail-badge" style="display:none">0</span>
+    </a>
   </nav>
 
   <div class="sidebar-bottom">
@@ -299,9 +360,17 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:14px 2
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
         <span id="topbar-bal">$0.00</span>
       </div>
-      <button class="notif-btn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      </button>
+      <div class="notif-wrap">
+        <button class="notif-btn" id="notif-btn" onclick="toggleNotif(event)" title="Notifications">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="notif-badge" id="notif-badge" style="display:none">0</span>
+        </button>
+        <div class="notif-dropdown" id="notif-dropdown">
+          <div class="notif-head"><strong>Notifications</strong><span id="notif-count" style="font-size:12px;color:var(--muted)"></span></div>
+          <div id="notif-list"><div class="notif-empty">No notifications</div></div>
+          <div class="notif-foot"><a href="#" onclick="showSection('webmail',null);closeNotif();return false">Open Webmail →</a></div>
+        </div>
+      </div>
       <div class="avatar avatar-sm" id="topbar-avatar">?</div>
     </div>
   </header>
@@ -594,6 +663,34 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:14px 2
       <div class="panel"><div class="overflow-x" id="tickets-body"><div class="empty">Loading...</div></div></div>
     </div>
 
+    <!-- ═══ WEBMAIL ═══ -->
+    <div class="section" id="section-webmail">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+        <div><h2 style="font-size:19px;font-weight:800;color:var(--navy)">Webmail</h2><p style="font-size:13px;color:var(--muted);margin-top:3px">Your inbox — messages and notifications from MercurialVest</p></div>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-ticket')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Compose</button>
+      </div>
+      <div class="mail-layout">
+        <div class="mail-list">
+          <div class="mail-list-head">
+            <h3 id="mail-list-title">Inbox</h3>
+            <div class="mail-filter">
+              <button class="mail-tab active" onclick="setMailFilter('inbox',this)">Inbox</button>
+              <button class="mail-tab" onclick="setMailFilter('sent',this)">Sent</button>
+              <button class="mail-tab" onclick="setMailFilter('all',this)">All</button>
+            </div>
+          </div>
+          <div id="mail-list-body"><div class="empty">Loading...</div></div>
+        </div>
+        <div class="mail-pane" id="mail-pane">
+          <div class="mail-empty">
+            <div class="mail-empty-icon">✉️</div>
+            <div style="font-size:14px;font-weight:600">Select a message to read</div>
+            <div style="font-size:12px">Your inbox, sent items, and bank notifications live here.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /page-content -->
 
   <footer>
@@ -702,6 +799,8 @@ async function init(){
   userId=session.user.id;
   const{data:p}=await sb.from('profiles').select('*').eq('id',userId).single();
   if(!p||p.status==='inactive'){sb.auth.signOut();window.location.replace('/login');return;}
+  // Keep admins out of the user dashboard — they belong in /admin.
+  if(p.role==='admin'){window.location.replace('/admin');return;}
   userProfile=p;
   const name=p.full_name||p.email.split('@')[0];
   const initial=(name[0]||'?').toUpperCase();
@@ -736,6 +835,8 @@ async function init(){
   document.getElementById('rs-age').textContent=daysOld+(daysOld===1?' day':' days');
   await loadTxns();
   await loadMyTransfers();
+  await loadMail();
+  await loadNotif();
   startClock();
   document.getElementById('loader').style.display='none';
 }
@@ -843,6 +944,15 @@ async function doTransfer(){
   setLoading('tf-btn',false,'Submit Request');
   if(error){showAlert('tf-err',error.message);return;}
   showAlert('tf-ok','Transfer request submitted! Awaiting admin approval.');
+  sendInboxMail('Transfer Request Submitted — $'+amount.toFixed(2),
+    'Your transfer request has been received and is pending admin approval.\n\n' +
+    '  • Amount: $'+amount.toFixed(2)+'\n' +
+    '  • Recipient: '+name+'\n' +
+    '  • Account/IBAN: '+account+'\n' +
+    '  • Bank: '+bank+'\n' +
+    (reason?'  • Note: '+reason+'\n':'') +
+    '\nFunds have been placed on hold pending approval. You will receive another message once the transfer is processed.\n\n— MercurialVest Bank',
+    'billing');
   ['tf-name','tf-account','tf-bank','tf-amount','tf-reason'].forEach(id=>document.getElementById(id).value='');
   setTimeout(()=>closeModal('modal-transfer'),2500);
   loadMyTransfers();
@@ -858,6 +968,10 @@ async function doQuickTransfer(){
   const{error}=await sb.from('transfer_requests').insert({user_id:userId,amount,recipient_name:name,recipient_account:account,bank_name:bank,reason:'Quick transfer'});
   if(error){showAlert('qt-err',error.message);return;}
   showAlert('qt-ok','Transfer submitted for approval!');
+  sendInboxMail('Quick Transfer Submitted — $'+amount.toFixed(2),
+    'Your quick transfer request has been submitted and is pending admin approval.\n\n' +
+    '  • Amount: $'+amount.toFixed(2)+'\n  • Recipient: '+name+'\n  • Account/IBAN: '+account+'\n  • Bank: '+bank+'\n\n— MercurialVest Bank',
+    'billing');
   ['qt-name','qt-account','qt-amount','qt-bank'].forEach(id=>document.getElementById(id).value='');
   loadMyTransfers();
 }
@@ -874,6 +988,11 @@ async function doLoan(){
   setLoading('ln-btn',false,'Submit Application');
   if(error){showAlert('ln-err',error.message);return;}
   showAlert('ln-ok','Loan application submitted! We\'ll review it shortly.');
+  sendInboxMail('Loan Application Submitted — $'+amount.toFixed(2),
+    'Your loan application has been received and is under review.\n\n' +
+    '  • Amount: $'+amount.toFixed(2)+'\n  • Term: '+term+' months\n  • Purpose: '+purpose+'\n\n' +
+    'Our team will assess your application and notify you of the decision. This usually takes 1–3 business days.\n\n— MercurialVest Bank',
+    'billing');
   setTimeout(()=>closeModal('modal-loan'),2500);
 }
 
@@ -888,6 +1007,12 @@ async function doTicket(){
   setLoading('tk-btn',false,'Submit Ticket');
   if(error){showAlert('tk-err',error.message);return;}
   showAlert('tk-ok','Support ticket created! We\'ll respond shortly.');
+  sendInboxMail('Support Message Sent — '+subject,
+    'Your message has been delivered to our support team.\n\n' +
+    '  • Subject: '+subject+'\n  • Category: '+mailCategoryLabel(category)+'\n\n' +
+    'Your message:\n"'+message+'"\n\n' +
+    'We will reply to you here in Webmail as soon as possible.\n\n— MercurialVest Bank',
+    category);
   setTimeout(()=>closeModal('modal-ticket'),2500);
 }
 
@@ -980,6 +1105,12 @@ async function submitDeposit() {
   setLoading('dep-btn', false, 'Continue to Deposit');
   if (error) { showAlert('dep-err', error.message); return; }
   showAlert('dep-ok', '✅ Deposit request submitted! Reference: ' + ref + '. Admin will review and credit your account shortly.');
+  var methodLabel = ({ bank_transfer: 'Bank Transfer', paypal: 'PayPal', bitcoin: 'Bitcoin' }[depMethod] || depMethod);
+  sendInboxMail('Deposit Request Submitted — $' + amount.toFixed(2),
+    'Your deposit request has been received and is pending verification.\n\n' +
+    '  • Amount: $' + amount.toFixed(2) + '\n  • Method: ' + methodLabel + '\n  • Reference: ' + ref + '\n\n' +
+    'Your account will be credited once the payment is confirmed by our team.\n\n— MercurialVest Bank',
+    'billing');
   document.getElementById('dep-amount').value = '';
   document.getElementById('dep-amount-display').textContent = '.00';
   document.querySelectorAll('.dep-chip').forEach(function(c){ c.classList.remove('active'); });
@@ -999,11 +1130,206 @@ function showSection(id, el) {
     loadDepositHistory();
   }
   if (id === 'deposit') loadDepositHistory();
+  if (id === 'webmail') loadMail();
+  closeNotif();
   return false;
 }
 
 function doLogout(){sb.auth.signOut().then(()=>window.location.replace('/login'));}
 document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)closeModal(o.id);}));
+
+/* ─── WEBMAIL ─── */
+// Mail is stored in support_tickets. A row reads as INBOUND mail ("from bank")
+// when admin_reply is set, and OUTBOUND ("sent by user") when the user wrote
+// the message field. Read state is tracked in localStorage per message id.
+var allMail = [];
+var mailFilter = 'inbox';
+var selectedMailId = null;
+
+function mailReadKey() { return 'mv_mail_read_' + userId; }
+function getReadIds() { try { return JSON.parse(localStorage.getItem(mailReadKey()) || '{}'); } catch(e) { return {}; } }
+function markMailRead(id) {
+  var r = getReadIds(); r[id] = 1;
+  try { localStorage.setItem(mailReadKey(), JSON.stringify(r)); } catch(e) {}
+}
+function isMailUnread(m) {
+  if (!getReadIds()[m.id]) {
+    // An unread inbound message is one with an admin_reply we haven't opened.
+    // Outbound (sent) messages are never "unread".
+    return isMailInbound(m);
+  }
+  return false;
+}
+function isMailInbound(m) { return !!(m.admin_reply && m.admin_reply.trim()); }
+
+function mailDirection(m) { return isMailInbound(m) ? 'in' : 'out'; }
+
+function mailPreview(m) {
+  var body = isMailInbound(m) ? (m.admin_reply || '') : (m.message || '');
+  return (body || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+}
+
+function mailFromLabel(m) {
+  return isMailInbound(m) ? 'MercurialVest Bank' : (userProfile.full_name || userProfile.email || 'You');
+}
+
+function mailFromInitial(m) {
+  var n = isMailInbound(m) ? 'M' : ((userProfile.full_name || userProfile.email || 'U')[0] || '?');
+  return n.toUpperCase();
+}
+
+function mailTime(ts) {
+  var d = new Date(ts), now = new Date();
+  if (d.toDateString() === now.toDateString()) {
+    return d.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' });
+  }
+  return d.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+}
+
+function mailCategoryLabel(cat) {
+  return ({ general: 'General', billing: 'Billing', account: 'Account', technical: 'Technical', fraud: 'Fraud / Security' }[cat] || cat || 'General');
+}
+
+async function loadMail() {
+  var { data } = await sb.from('support_tickets').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(100);
+  allMail = data || [];
+  renderMailList();
+  renderMailBadges();
+}
+
+function setMailFilter(f, el) {
+  mailFilter = f;
+  document.querySelectorAll('.mail-tab').forEach(function(t){ t.classList.remove('active'); });
+  if (el) el.classList.add('active');
+  document.getElementById('mail-list-title').textContent = ({ inbox: 'Inbox', sent: 'Sent', all: 'All Mail' }[f] || 'Inbox');
+  renderMailList();
+  return false;
+}
+
+function filteredMail() {
+  if (mailFilter === 'inbox') return allMail.filter(isMailInbound);
+  if (mailFilter === 'sent') return allMail.filter(function(m){ return !isMailInbound(m); });
+  return allMail;
+}
+
+function renderMailList() {
+  var el = document.getElementById('mail-list-body');
+  var list = filteredMail();
+  if (!list.length) {
+    el.innerHTML = '<div class="empty">' + (mailFilter === 'inbox' ? 'Your inbox is empty.' : mailFilter === 'sent' ? 'No sent messages.' : 'No messages.') + '</div>';
+    return;
+  }
+  el.innerHTML = list.map(function(m) {
+    var unread = isMailUnread(m);
+    var selected = m.id === selectedMailId ? ' selected' : '';
+    var dir = mailDirection(m);
+    return '<div class="mail-item' + (unread ? ' unread' : '') + selected + '" onclick="openMail(\'' + m.id + '\')">' +
+      '<div class="mail-from"><span><span class="mail-unread-dot"></span>' + esc(mailFromLabel(m)) + '</span>' +
+      '<span class="mail-cat">' + mailCategoryLabel(m.category) + '</span></div>' +
+      '<div class="mail-subj">' + (dir === 'out' ? '<span class="mail-tag-out">Sent</span> ' : '') + esc(m.subject || '(no subject)') + '</div>' +
+      '<div class="mail-prev">' + esc(mailPreview(m)) + '</div>' +
+      '<div class="mail-date">' + mailTime(m.created_at) + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function openMail(id) {
+  var m = allMail.find(function(x){ return x.id === id; });
+  if (!m) return;
+  selectedMailId = id;
+  markMailRead(id);
+  renderMailList();
+  renderMailBadges();
+  var inbound = isMailInbound(m);
+  var body = inbound ? (m.admin_reply || '') : (m.message || '');
+  var pane = document.getElementById('mail-pane');
+  pane.innerHTML =
+    '<div class="mail-read-head">' +
+      '<div class="mail-read-subj">' + esc(m.subject || '(no subject)') + '</div>' +
+      '<div class="mail-read-meta">' +
+        '<div class="avatar">' + mailFromInitial(m) + '</div>' +
+        '<div><strong>' + esc(mailFromLabel(m)) + '</strong><div style="font-size:11px">' + new Date(m.created_at).toLocaleString() + '</div></div>' +
+        '<span class="' + (inbound ? 'mail-tag-in' : 'mail-tag-out') + '">' + (inbound ? 'Inbox' : 'Sent') + '</span>' +
+        '<span class="mail-cat" style="margin-left:auto">' + mailCategoryLabel(m.category) + '</span>' +
+      '</div>' +
+    '</div>' +
+    '<div class="mail-read-body">' + esc(body) + (m.admin_reply && !inbound && m.message ? '\n\n— Your message —\n' + esc(m.message || '') : '') + '</div>' +
+    '<div class="mail-read-actions">' +
+      (inbound ? '<button class="btn btn-primary btn-sm" onclick="openModal(\'modal-ticket\')">Reply</button>' : '') +
+      '<button class="btn btn-cancel btn-sm" onclick="selectedMailId=null;renderMailList();document.getElementById(\'mail-pane\').innerHTML=\'<div class=\\\'mail-empty\\\'><div class=\\\'mail-empty-icon\\\'>✉️</div><div style=\\\'font-size:14px;font-weight:600\\\'>Select a message to read</div><div style=\\\'font-size:12px\\\'>Your inbox, sent items, and bank notifications live here.</div></div>\';">Close</button>' +
+    '</div>';
+}
+
+function renderMailBadges() {
+  var unreadInbox = allMail.filter(isMailUnread).length;
+  var badge = document.getElementById('nav-mail-badge');
+  if (badge) {
+    badge.textContent = unreadInbox;
+    badge.style.display = unreadInbox ? 'flex' : 'none';
+  }
+  var nbadge = document.getElementById('notif-badge');
+  if (nbadge) {
+    nbadge.textContent = unreadInbox;
+    nbadge.style.display = unreadInbox ? 'flex' : 'none';
+  }
+}
+
+/* ─── NOTIFICATIONS (bell) ─── */
+async function loadNotif() { renderNotif(); }
+function toggleNotif(e) {
+  if (e) e.stopPropagation();
+  document.getElementById('notif-dropdown').classList.toggle('open');
+  renderNotif();
+}
+function closeNotif() { var d = document.getElementById('notif-dropdown'); if (d) d.classList.remove('open'); }
+document.addEventListener('click', function(e) {
+  var wrap = document.querySelector('.notif-wrap');
+  var dd = document.getElementById('notif-dropdown');
+  if (dd && dd.classList.contains('open') && wrap && !wrap.contains(e.target)) closeNotif();
+});
+
+function renderNotif() {
+  var list = document.getElementById('notif-list');
+  var count = document.getElementById('notif-count');
+  if (!list) return;
+  // Notifications = unread inbound messages, newest first
+  var items = allMail.filter(function(m){ return isMailUnread(m); }).slice(0, 12);
+  if (count) count.textContent = items.length ? (items.length + ' new') : '';
+  if (!items.length) {
+    list.innerHTML = '<div class="notif-empty">No new notifications</div>';
+    return;
+  }
+  list.innerHTML = items.map(function(m) {
+    return '<a class="notif-item unread" href="#" onclick="openMail(\'' + m.id + '\');showSection(\'webmail\',null);closeNotif();return false">' +
+      '<div class="notif-subj"><span class="notif-dot"></span>' + esc(m.subject || '(no subject)') + '</div>' +
+      '<div class="notif-prev">' + esc(mailPreview(m)) + '</div>' +
+      '<div class="notif-time">' + new Date(m.created_at).toLocaleString() + '</div>' +
+    '</a>';
+  }).join('');
+}
+
+/* ─── NOTIFICATION MAIL HELPER ─── */
+// Drops an inbound notification into the user's inbox (a closed ticket owned
+// by the user with the body in admin_reply). Used after transfers, deposits,
+// loans, and tickets so the user gets a confirmation message in Webmail.
+function sendInboxMail(subject, body, category) {
+  if (!userId) return;
+  sb.from('support_tickets').insert({
+    user_id: userId,
+    category: category || 'general',
+    subject: subject,
+    message: 'Notification',
+    admin_reply: body,
+    status: 'closed'
+  }).then(function(){ loadMail(); loadNotif(); })
+    .catch(function(){});
+}
+
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
 
 init();
 </script>
