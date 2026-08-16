@@ -704,22 +704,31 @@ let selectedTicketId = null;
 
 // ── Init ──────────────────────────────────────────────
 async function init() {
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) { window.location.replace('/admin-login'); return; }
-  const { data: profile } = await sb.from('profiles').select('*').eq('id', session.user.id).single();
-  if (!profile || profile.role !== 'admin') {
-    // Logged-in non-admins go to their user dashboard; signed-out users go to admin login.
-    if (profile) { window.location.replace('/dashboard'); return; }
-    sb.auth.signOut();
-    window.location.replace('/admin-login');
-    return;
+  // Safety net: never let the admin loader hang forever.
+  var hideLoader = function(){ var l = document.getElementById('loader'); if (l) l.style.display = 'none'; };
+  var safety = setTimeout(hideLoader, 10000);
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { window.location.replace('/admin-login'); return; }
+    const { data: profile, error: perr } = await sb.from('profiles').select('*').eq('id', session.user.id).single();
+    if (perr || !profile || profile.role !== 'admin') {
+      // Logged-in non-admins go to their user dashboard; signed-out users go to admin login.
+      if (profile) { window.location.replace('/dashboard'); return; }
+      sb.auth.signOut();
+      window.location.replace('/admin-login');
+      return;
+    }
+    if (profile.status === 'inactive') { sb.auth.signOut(); window.location.replace('/admin-login'); return; }
+    currentUser = profile;
+    document.getElementById('admin-name').textContent = profile.full_name || profile.email.split('@')[0];
+    document.getElementById('admin-avatar').textContent = (profile.full_name || profile.email)[0].toUpperCase();
+    try { await loadAll(); } catch (e) { console.error('admin loadAll error:', e); }
+  } catch (err) {
+    console.error('Admin init error:', err);
+  } finally {
+    clearTimeout(safety);
+    hideLoader();
   }
-  if (profile.status === 'inactive') { sb.auth.signOut(); window.location.replace('/admin-login'); return; }
-  currentUser = profile;
-  document.getElementById('admin-name').textContent = profile.full_name || profile.email.split('@')[0];
-  document.getElementById('admin-avatar').textContent = (profile.full_name || profile.email)[0].toUpperCase();
-  await loadAll();
-  document.getElementById('loader').style.display = 'none';
 }
 
 async function loadAll() {

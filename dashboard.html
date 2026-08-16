@@ -794,51 +794,72 @@ const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
 let userId=null,userProfile=null,allTxns=[];
 
 async function init(){
-  const{data:{session}}=await sb.auth.getSession();
-  if(!session){window.location.replace('/login');return;}
-  userId=session.user.id;
-  const{data:p}=await sb.from('profiles').select('*').eq('id',userId).single();
-  if(!p||p.status==='inactive'){sb.auth.signOut();window.location.replace('/login');return;}
-  // Keep admins out of the user dashboard — they belong in /admin.
-  if(p.role==='admin'){window.location.replace('/admin');return;}
-  userProfile=p;
-  const name=p.full_name||p.email.split('@')[0];
-  const initial=(name[0]||'?').toUpperCase();
-  // Sidebar
-  document.getElementById('sb-avatar').textContent=initial;
-  document.getElementById('sb-name').textContent=name;
-  document.getElementById('sb-acct-short').textContent=p.account_number||'—';
-  // KYC badge
-  const kyc=p.kyc_status||'unverified';
-  const kycEl=document.getElementById('kyc-badge');
-  if(kyc==='verified'){kycEl.classList.add('verified');document.getElementById('kyc-icon').textContent='✓';document.getElementById('kyc-text').textContent='KYC Verified';}
-  // Topbar
-  document.getElementById('topbar-avatar').textContent=initial;
-  document.getElementById('topbar-bal').textContent='$'+Number(p.balance||0).toLocaleString('en',{minimumFractionDigits:2});
-  // Balance card
-  const bal='$'+Number(p.balance||0).toLocaleString('en',{minimumFractionDigits:2});
-  document.getElementById('st-balance').textContent=bal;
-  document.getElementById('st-limit').textContent='$'+(p.transaction_limit||500000).toLocaleString('en');
-  document.getElementById('bc-first-name').textContent=name.split(' ')[0];
-  document.getElementById('bc-balance').textContent=bal+' USD';
-  document.getElementById('bc-acct-num').textContent=p.account_number||'——————';
-  document.getElementById('rs-limit').textContent='$'+Number(p.transaction_limit||500000).toLocaleString('en',{minimumFractionDigits:2});
-  document.getElementById('dep-acct-num').textContent=p.account_number||'—';
-  document.getElementById('dep-ref').textContent='REF-'+userId.substring(0,8).toUpperCase();
-  document.getElementById('card-name').textContent=name.toUpperCase();
-  document.getElementById('card-num').textContent='•••• •••• •••• '+(p.account_number||'——').slice(-4);
-  // Status badge on card
-  const sb2=document.getElementById('bc-status-badge');
-  if(p.status==='active'){sb2.style.background='rgba(74,222,128,.2)';sb2.style.color='#4ade80';sb2.textContent='Active';}
-  // Account age
-  const daysOld=Math.floor((Date.now()-new Date(p.created_at))/86400000);
-  document.getElementById('rs-age').textContent=daysOld+(daysOld===1?' day':' days');
-  await loadTxns();
-  await loadMyTransfers();
-  await loadMail();
-  await loadNotif();
-  startClock();
-  document.getElementById('loader').style.display='none';
+  // Hard safety net: never let the loader hang forever. If anything below
+  // throws or stalls (network drop, rejected promise, JS error in a render
+  // helper), the loader still hides so the user isn't stuck on a spinner.
+  var hideLoader=function(){var l=document.getElementById('loader');if(l)l.style.display='none';};
+  var safety=setTimeout(hideLoader,10000);
+
+  try{
+    const{data:{session}}=await sb.auth.getSession();
+    if(!session){window.location.replace('/login');return;}
+    userId=session.user.id;
+
+    const{data:p,error:perr}=await sb.from('profiles').select('*').eq('id',userId).single();
+    if(perr||!p){
+      // Profile missing or blocked by RLS — try to create a default user row,
+      // then proceed. Never leave the user stuck on the loader.
+      try{await sb.from('profiles').upsert({id:userId,role:'user',status:'active'},{onConflict:'id'});}catch(e){}
+      window.location.replace('/dashboard');return;
+    }
+    if(p.status==='inactive'){sb.auth.signOut();window.location.replace('/login');return;}
+    // Keep admins out of the user dashboard — they belong in /admin.
+    if(p.role==='admin'){window.location.replace('/admin');return;}
+    userProfile=p;
+    const name=p.full_name||p.email.split('@')[0];
+    const initial=(name[0]||'?').toUpperCase();
+    // Sidebar
+    document.getElementById('sb-avatar').textContent=initial;
+    document.getElementById('sb-name').textContent=name;
+    document.getElementById('sb-acct-short').textContent=p.account_number||'—';
+    // KYC badge
+    const kyc=p.kyc_status||'unverified';
+    const kycEl=document.getElementById('kyc-badge');
+    if(kyc==='verified'){kycEl.classList.add('verified');document.getElementById('kyc-icon').textContent='✓';document.getElementById('kyc-text').textContent='KYC Verified';}
+    // Topbar
+    document.getElementById('topbar-avatar').textContent=initial;
+    document.getElementById('topbar-bal').textContent='$'+Number(p.balance||0).toLocaleString('en',{minimumFractionDigits:2});
+    // Balance card
+    const bal='$'+Number(p.balance||0).toLocaleString('en',{minimumFractionDigits:2});
+    document.getElementById('st-balance').textContent=bal;
+    document.getElementById('st-limit').textContent='$'+(p.transaction_limit||500000).toLocaleString('en');
+    document.getElementById('bc-first-name').textContent=name.split(' ')[0];
+    document.getElementById('bc-balance').textContent=bal+' USD';
+    document.getElementById('bc-acct-num').textContent=p.account_number||'——————';
+    document.getElementById('rs-limit').textContent='$'+Number(p.transaction_limit||500000).toLocaleString('en',{minimumFractionDigits:2});
+    document.getElementById('dep-acct-num').textContent=p.account_number||'—';
+    document.getElementById('dep-ref').textContent='REF-'+userId.substring(0,8).toUpperCase();
+    document.getElementById('card-name').textContent=name.toUpperCase();
+    document.getElementById('card-num').textContent='•••• •••• •••• '+(p.account_number||'——').slice(-4);
+    // Status badge on card
+    const sb2=document.getElementById('bc-status-badge');
+    if(p.status==='active'){sb2.style.background='rgba(74,222,128,.2)';sb2.style.color='#4ade80';sb2.textContent='Active';}
+    // Account age
+    const daysOld=Math.floor((Date.now()-new Date(p.created_at))/86400000);
+    document.getElementById('rs-age').textContent=daysOld+(daysOld===1?' day':' days');
+
+    // Each section loads independently so one failure never blocks the others.
+    try{await loadTxns();}catch(e){console.warn('loadTxns failed',e);}
+    try{await loadMyTransfers();}catch(e){console.warn('loadMyTransfers failed',e);}
+    try{await loadMail();}catch(e){console.warn('loadMail failed',e);}
+    try{await loadNotif();}catch(e){console.warn('loadNotif failed',e);}
+    startClock();
+  }catch(err){
+    console.error('Dashboard init error:',err);
+  }finally{
+    clearTimeout(safety);
+    hideLoader();
+  }
 }
 
 async function loadTxns(){
