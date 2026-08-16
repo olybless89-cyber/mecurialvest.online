@@ -194,7 +194,7 @@ function sendWelcomeMail(uid, name, email) {
       status: "closed"
     })
     .then(function() { finishRegister(); })
-    .catch(function() { finishRegister(); });
+    .catch(function(err) { console.warn("sendWelcomeMail insert failed:", err && err.message || err); finishRegister(); });
 }
 
 function finishRegister() {

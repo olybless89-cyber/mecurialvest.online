@@ -194,6 +194,15 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 
 /* ── Notification bell ── */
 .notif-wrap{position:relative}
+.toast-stack{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:340px}
+.toast{background:#fff;border:1px solid #e2e8f0;border-left:4px solid #2563eb;border-radius:10px;box-shadow:0 8px 24px rgba(15,35,86,.18);padding:14px 16px;display:flex;gap:10px;align-items:flex-start;cursor:pointer;animation:toastIn .3s ease}
+.toast:hover{box-shadow:0 10px 30px rgba(15,35,86,.24)}
+.toast .toast-icon{font-size:20px;line-height:1}
+.toast .toast-body{flex:1;min-width:0}
+.toast .toast-title{font-weight:700;font-size:13px;color:#0f2356;margin-bottom:2px}
+.toast .toast-msg{font-size:12px;color:#64748b;line-height:1.4;word-wrap:break-word}
+.toast .toast-close{font-size:16px;color:#94a3b8;background:none;border:none;cursor:pointer;padding:0 0 0 6px;line-height:1}
+@keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
 .notif-dropdown{position:absolute;top:46px;right:0;width:340px;max-height:420px;overflow-y:auto;background:var(--white);border:1.5px solid var(--border);border-radius:14px;box-shadow:0 16px 48px rgba(15,35,86,.16);z-index:300;display:none}
 .notif-dropdown.open{display:block}
 .notif-head{padding:14px 16px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between}
@@ -787,6 +796,7 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:14px 2
   </div>
 </div>
 
+<div class="toast-stack" id="toast-stack"></div>
 <script>
 const SUPA_URL="https://uatnxwvkpuvxvgngxxez.supabase.co";
 const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhdG54d3ZrcHV2eHZnbmd4eGV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1NjM1OTAsImV4cCI6MjEwMjEzOTU5MH0.l0X90PCIpX4OZoU1yTEpuh3Ro7ZqkP79KCFiH3RQ_lI";
@@ -849,6 +859,7 @@ async function init(){
     document.getElementById('rs-age').textContent=daysOld+(daysOld===1?' day':' days');
 
     // Each section loads independently so one failure never blocks the others.
+    try{await ensureWelcomeEmail();}catch(e){console.warn('ensureWelcomeEmail failed',e);}
     try{await loadTxns();}catch(e){console.warn('loadTxns failed',e);}
     try{await loadMyTransfers();}catch(e){console.warn('loadMyTransfers failed',e);}
     try{await loadMail();}catch(e){console.warn('loadMail failed',e);}
@@ -1211,6 +1222,41 @@ function mailCategoryLabel(cat) {
   return ({ general: 'General', billing: 'Billing', account: 'Account', technical: 'Technical', fraud: 'Fraud / Security' }[cat] || cat || 'General');
 }
 
+// Guarantees the user has a welcome email in their inbox. Runs on every
+// dashboard load with an authenticated session, so even if the register page's
+// insert failed (timing, RLS, network), the welcome email is created here.
+// Idempotent: checks for an existing welcome ticket before inserting.
+async function ensureWelcomeEmail() {
+  if (!userId || !userProfile) return;
+  var WELCOME_SUBJECT = 'Welcome to MercurialVest Bank — Your Account is Ready';
+  var { data: existing } = await sb.from('support_tickets')
+    .select('id').eq('user_id', userId).eq('subject', WELCOME_SUBJECT).limit(1);
+  if (existing && existing.length) return; // already has a welcome email
+  var acct = 'MV' + String(userId).replace(/-/g, '').slice(0, 8).toUpperCase();
+  var name = userProfile.full_name || (userProfile.email || '').split('@')[0];
+  var body =
+    'Welcome to MercurialVest Bank, ' + name + '!\n\n' +
+    'Your account has been successfully created. Here are your details:\n' +
+    '  • Email: ' + (userProfile.email || '') + '\n' +
+    '  • Account Number: ' + acct + '\n' +
+    '  • Status: Active\n\n' +
+    'You can now explore your account, request transfers, deposits, and loans, ' +
+    'or reach our support team.\n\n' +
+    'A few things to get you started:\n' +
+    '  1. Complete KYC verification to unlock higher transaction limits.\n' +
+    '  2. Fund your account via the Deposit page.\n' +
+    '  3. Visit the Webmail section anytime to view messages and notifications ' +
+    'from us — you are reading your first one right now.\n\n' +
+    'Thank you for banking with MercurialVest.\n\n' +
+    '— The MercurialVest Team';
+  var { error } = await sb.from('support_tickets').insert({
+    user_id: userId, category: 'account', subject: WELCOME_SUBJECT,
+    message: 'Welcome email', admin_reply: body, status: 'closed'
+  });
+  if (error) { console.warn('ensureWelcomeEmail insert error:', error.message); }
+  else { setTimeout(function(){ showToast('Welcome to MercurialVest Bank', 'A welcome message is in your inbox. Tap to read it.', function(){ showSection('webmail', null); }); }, 800); }
+}
+
 async function loadMail() {
   var { data } = await sb.from('support_tickets').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(100);
   allMail = data || [];
@@ -1333,8 +1379,27 @@ function renderNotif() {
 // Drops an inbound notification into the user's inbox (a closed ticket owned
 // by the user with the body in admin_reply). Used after transfers, deposits,
 // loans, and tickets so the user gets a confirmation message in Webmail.
+// Visible toast popup so the user actually SEES when a notification arrives,
+// instead of only discovering it later in the Webmail section.
+function showToast(title, msg, onClick) {
+  var stack = document.getElementById('toast-stack');
+  if (!stack) return;
+  var el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = '<div class="toast-icon">✉️</div>' +
+    '<div class="toast-body"><div class="toast-title"></div><div class="toast-msg"></div></div>' +
+    '<button class="toast-close" type="button">×</button>';
+  el.querySelector('.toast-title').textContent = title;
+  el.querySelector('.toast-msg').textContent = msg;
+  function dismiss() { el.style.transition = 'opacity .3s, transform .3s'; el.style.opacity = '0'; el.style.transform = 'translateX(40px)'; setTimeout(function(){ if (el.parentNode) el.parentNode.removeChild(el); }, 300); }
+  el.querySelector('.toast-close').onclick = function(e) { e.stopPropagation(); dismiss(); };
+  if (onClick) { el.onclick = function() { onClick(); dismiss(); }; }
+  stack.appendChild(el);
+  setTimeout(dismiss, 6000);
+}
+
 function sendInboxMail(subject, body, category) {
-  if (!userId) return;
+  if (!userId) { console.warn('sendInboxMail: no userId'); return; }
   sb.from('support_tickets').insert({
     user_id: userId,
     category: category || 'general',
@@ -1342,8 +1407,8 @@ function sendInboxMail(subject, body, category) {
     message: 'Notification',
     admin_reply: body,
     status: 'closed'
-  }).then(function(){ loadMail(); loadNotif(); })
-    .catch(function(){});
+  }).then(function(){ loadMail(); loadNotif(); showToast('New message', subject); })
+    .catch(function(err){ console.warn('sendInboxMail insert failed:', subject, err && err.message || err); });
 }
 
 function esc(s) {
