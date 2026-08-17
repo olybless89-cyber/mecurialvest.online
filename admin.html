@@ -150,6 +150,12 @@ body{font-family:'Inter',sans-serif;background:#0b1120;color:#e2e8f0;min-height:
 
 /* ── Empty state ── */
 .empty{text-align:center;padding:48px 24px;color:#4a5568}
+/* ── Inline alert banner (load failures) ── */
+.alert-banner{display:none;align-items:flex-start;gap:10px;background:#2d0f0f;border:1px solid #7f1d1d;border-left:4px solid #ef4444;color:#fca5a5;border-radius:10px;padding:14px 16px;margin:0 20px 16px;font-size:13px;line-height:1.5}
+.alert-banner.show{display:flex}
+.alert-banner .alert-icon{font-size:18px;line-height:1.2;flex-shrink:0}
+.alert-banner code{background:#1a0606;color:#fecaca;padding:1px 5px;border-radius:4px;font-size:12px}
+.alert-banner a{color:#93c5fd;text-decoration:underline}
 .empty-icon{font-size:40px;margin-bottom:12px;opacity:.4}
 .empty-text{font-size:15px}
 
@@ -334,6 +340,10 @@ body{font-family:'Inter',sans-serif;background:#0b1120;color:#e2e8f0;min-height:
       <div class="section" id="section-users">
         <div class="section-title">User Management</div>
         <div class="section-sub">Click any user to manage their account, funds, and status.</div>
+        <div class="alert-banner" id="users-alert">
+          <span class="alert-icon">⚠️</span>
+          <span id="users-alert-text"></span>
+        </div>
         <div class="table-wrap">
           <div class="table-header">
             <h3>All Users <span id="user-count" style="color:#4a5568;font-weight:400;font-size:13px"></span></h3>
@@ -517,7 +527,7 @@ body{font-family:'Inter',sans-serif;background:#0b1120;color:#e2e8f0;min-height:
         <button class="btn btn-primary" onclick="openMessageModal()">✉️ Send Message</button>
       </div>
 
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <button class="btn btn-ghost btn-sm" id="mu-toggle-btn" onclick="toggleUserStatus()">Toggle Status</button>
         <select class="form-select" style="flex:1;font-size:12px;padding:6px 10px" id="mu-kyc-select" onchange="updateKyc()">
           <option value="">Update KYC Status...</option>
@@ -527,6 +537,7 @@ body{font-family:'Inter',sans-serif;background:#0b1120;color:#e2e8f0;min-height:
           <option value="rejected">Rejected</option>
         </select>
       </div>
+      <div class="alert alert-err" id="mu-err" style="margin-top:10px"></div>
     </div>
   </div>
 </div>
@@ -761,22 +772,69 @@ async function loadStats() {
 }
 
 // ── Users ─────────────────────────────────────────────
+// How user loading works (and why):
+//   1. Primary path: the `admin_get_all_users` SECURITY DEFINER RPC, which
+//      bypasses RLS and returns every profile. (Fixed in
+//      SQL/supabase/001_fix_admin_user_management.sql — the previous version
+//      threw `column reference "role" is ambiguous`.)
+//   2. Fallback: a direct client read of `profiles`. This only works if an
+//      admin-bypass RLS policy exists; by default RLS restricts reads to
+//      `auth.uid() = id`, so this returns at most the admin's own row. We use
+//      it opportunistically (e.g. on a project whose RLS allows admin reads)
+//      but otherwise fall through to a clear, actionable error instead of a
+//      silently-empty table.
+//   3. If both paths fail to return other users, show a banner explaining the
+//      one-time SQL fix to apply.
 async function loadUsers() {
-  // Try RPC first; fall back to direct table query if RPC has SQL bug
+  hideUsersAlert();
   let users = null;
+  let rpcErr = null;
+
   const rpcRes = await sb.rpc('admin_get_all_users');
-  if (!rpcRes.error && rpcRes.data) {
+  if (!rpcRes.error && Array.isArray(rpcRes.data)) {
     users = rpcRes.data;
   } else {
-    // Direct query fallback — works because admin has SECURITY DEFINER access
-    const { data, error } = await sb.from('profiles')
+    rpcErr = rpcRes.error;
+    // Opportunistic direct-table fallback (only helps if RLS grants admins a
+    // read-all policy; otherwise RLS limits this to the caller's own row).
+    const dir = await sb.from('profiles')
       .select('id,email,full_name,role,status,balance,held_funds,account_number,kyc_status,phone,transaction_limit,created_at')
       .order('created_at', { ascending: false });
-    if (!error) users = data;
+    if (!dir.error && Array.isArray(dir.data)) users = dir.data;
   }
+
   allUsers = users || [];
   renderUsers(allUsers);
   document.getElementById('user-count').textContent = '(' + allUsers.length + ')';
+
+  // Detect the broken/RLS-limited state: either the RPC threw, or the only
+  // rows we got back are the admin's own (RLS own-row restriction). Surface a
+  // clear, actionable message instead of leaving the admin staring at an empty
+  // (or single-row) list they cannot act on.
+  const myId = currentUser && currentUser.id;
+  const onlySelf = allUsers.length > 0 && allUsers.every(u => u.id === myId);
+  if (rpcErr || allUsers.length === 0 || onlySelf) {
+    showUsersAlert(rpcErr, onlySelf, allUsers.length);
+  }
+}
+
+function showUsersAlert(err, onlySelf, count) {
+  let msg;
+  if (err && /ambiguous/i.test(err.message || '')) {
+    msg = 'The <code>admin_get_all_users</code> database function has a bug (ambiguous <code>role</code> column) and must be fixed before users can be listed. Apply <code>SQL/supabase/001_fix_admin_user_management.sql</code> in the Supabase SQL editor, then reload.';
+  } else if (err) {
+    msg = 'Could not load users via <code>admin_get_all_users</code>: ' + (err.message || 'unknown error') + '. If this persists, apply <code>SQL/supabase/001_fix_admin_user_management.sql</code> in the Supabase SQL editor, then reload.';
+  } else if (onlySelf) {
+    msg = 'Only your own profile is visible. Row-Level Security on <code>profiles</code> is blocking cross-user reads. Apply <code>SQL/supabase/001_fix_admin_user_management.sql</code> in the Supabase SQL editor (it redefines the list as a SECURITY DEFINER RPC that bypasses RLS), then reload.';
+  } else {
+    msg = 'No users are visible yet. If accounts have been created, apply <code>SQL/supabase/001_fix_admin_user_management.sql</code> in the Supabase SQL editor, then reload.';
+  }
+  document.getElementById('users-alert-text').innerHTML = msg;
+  document.getElementById('users-alert').classList.add('show');
+}
+
+function hideUsersAlert() {
+  document.getElementById('users-alert').classList.remove('show');
 }
 
 function renderUsers(users) {
@@ -822,13 +880,27 @@ function openUserModal(uid) {
   document.getElementById('mu-joined').textContent = new Date(u.created_at).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'});
   document.getElementById('mu-toggle-btn').textContent = u.status === 'active' ? '🚫 Deactivate User' : '✅ Activate User';
   document.getElementById('mu-kyc-select').value = '';
+  document.getElementById('mu-err').style.display = 'none';
   openModal('modal-user');
 }
 
+// Activate / deactivate a user via the admin_set_user_status RPC (SECURITY
+// DEFINER, bypasses RLS). The previous implementation wrote to `profiles`
+// directly from the client, which RLS silently blocked for any user other than
+// the admin themselves — so toggling status appeared to do nothing.
 async function toggleUserStatus() {
   const u = allUsers.find(x => x.id === selectedUserId);
+  if (!u) return;
   const newStatus = u.status === 'active' ? 'inactive' : 'active';
-  await sb.from('profiles').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', selectedUserId);
+  const btn = document.getElementById('mu-toggle-btn');
+  setLoading('mu-toggle-btn', true, 'Updating...');
+  document.getElementById('mu-err').style.display = 'none';
+  const { error } = await sb.rpc('admin_set_user_status', { target_id: selectedUserId, new_status: newStatus });
+  setLoading('mu-toggle-btn', false, u.status === 'active' ? '🚫 Deactivate User' : '✅ Activate User');
+  if (error) {
+    showAlert('mu-err', error.message || 'Could not update user status. Apply SQL/supabase/001_fix_admin_user_management.sql if the RPC is missing.');
+    return;
+  }
   closeModal('modal-user');
   await loadUsers();
   await loadStats();

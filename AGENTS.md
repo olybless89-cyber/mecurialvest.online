@@ -40,3 +40,39 @@ and `dashboard.html`/`admin.html` are the ones that matter for auth flows.
 `php -S 0.0.0.0:12000 -t public public/router.php` (PHP CLI required).
 Without PHP, a trivial static server with the vercel.json rewrites also works
 (the pages are static + remote Supabase JS).
+
+## Supabase schema (NOT in this repo)
+The live schema (tables, RLS policies, RPC functions) lives in the Supabase
+project `uatnxwvkpuvxvgngxxez` — it is NOT the legacy `SQL/database.sql` (that
+is a MySQL phpMyAdmin dump from the old PHP app and is dead code). Migrations
+that touch the live Supabase schema live in `SQL/supabase/` and must be applied
+manually in the Supabase Dashboard SQL editor (the repo has no service_role key
+or DB password, so they cannot be auto-applied from the deploy).
+
+## Admin user management — known bug + fix (2026-08)
+Symptom: created users did not show on the admin dashboard and could not be
+managed. Root cause (verified against live project):
+- The `admin_get_all_users` RPC threw `column reference "role" is ambiguous`
+  (a PL/pgSQL var/param named `role` clashed with `profiles.role`), so the user
+  list RPC errored for everyone.
+- The client fallback read `profiles` directly, but RLS on `profiles` is
+  `auth.uid() = id` (own row only) with NO admin bypass — so a client read can
+  never return other users (returns the admin's own row or `[]`).
+- `toggleUserStatus()` wrote to `profiles` directly from the client, which RLS
+  silently blocked for any non-self user (deactivate/activate did nothing).
+Fix (in repo):
+- `SQL/supabase/001_fix_admin_user_management.sql` redefines
+  `admin_get_all_users` as SECURITY DEFINER (bypasses RLS) with table-qualified
+  columns (`p.role`) and adds `admin_set_user_status(target_id, new_status)`
+  (SECURITY DEFINER, admin-guarded). **Must be applied in the Supabase SQL
+  editor once; idempotent.**
+- `admin.html` (+ `public/admin.html`) `loadUsers()` surfaces a clear, actionable
+  banner (instead of a silent empty table) when the RPC is still broken or RLS
+  limits reads to self; `toggleUserStatus()` now calls the
+  `admin_set_user_status` RPC instead of the RLS-blocked direct update.
+Other admin management RPCs already work via SECURITY DEFINER:
+`admin_update_kyc`, `admin_credit_user`, `admin_hold_funds`, `admin_release_hold`,
+`admin_review_deposit`, `admin_review_transfer`, `admin_review_loan`,
+`admin_reply_ticket`, `admin_get_stats`. Cross-user-readable tables (no RLS
+own-row restriction): `support_tickets`, `transactions`, `deposit_requests`,
+`transfer_requests`, `loan_applications`.

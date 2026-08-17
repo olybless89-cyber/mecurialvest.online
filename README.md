@@ -1,5 +1,31 @@
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400"></a></p>
 
+## MercurialVest — important setup notes
+
+This repo is a **static HTML/JS** banking demo backed by **Supabase** (not the
+Laravel app the scaffolding suggests — see `AGENTS.md`). The deploy serves the
+files in `public/` via `public/router.php`.
+
+### One-time Supabase migration (required for the admin dashboard)
+
+The admin "All Users" table and the activate/deactivate action depend on two
+SECURITY DEFINER RPCs in Supabase. The original `admin_get_all_users` had a bug
+(`column reference "role" is ambiguous`) and no status-toggle RPC existed, so
+created users never appeared on the admin dashboard and could not be managed.
+
+Apply the fix once in the **Supabase Dashboard ▸ SQL Editor** (New query ▸ paste
+□ Run):
+
+```
+SQL/supabase/001_fix_admin_user_management.sql
+```
+
+It is idempotent and safe to re-run. After running it, reload `/admin` — all
+users will be listed and manageable. Until it is applied, the admin page shows a
+clear banner explaining the missing migration instead of a silent empty table.
+
+---
+
 <p align="center">
 <a href="https://travis-ci.org/laravel/framework"><img src="https://travis-ci.org/laravel/framework.svg" alt="Build Status"></a>
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
