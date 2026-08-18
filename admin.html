@@ -1055,18 +1055,17 @@ var DEP_METHOD_LABELS = { bank_transfer: '🏦 Bank Transfer', paypal: '💳 Pay
 async function loadDeposits() {
   const filter = document.getElementById('deposit-filter');
   const status = filter ? filter.value : 'pending';
-  let q = sb.from('deposit_requests').select('*').order('created_at',{ascending:false});
-  if (status) q = q.eq('status', status);
-  const { data } = await q;
+  const { data } = await sb.rpc('admin_get_all_deposits');
   const users = {};
   allUsers.forEach(u => users[u.id] = u.email);
   const tb = document.getElementById('deposits-tbody');
   if (!tb) return;
-  if (!data || !data.length) {
+  const rows = (data || []).filter(d => !status || d.status === status);
+  if (!rows.length) {
     tb.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-icon">💵</div><div class="empty-text">No deposit requests</div></div></td></tr>';
     return;
   }
-  tb.innerHTML = data.map(d => `
+  tb.innerHTML = rows.map(d => `
     <tr>
       <td style="font-weight:600">${users[d.user_id] || d.user_id.substring(0,8)}</td>
       <td style="font-weight:700;color:#4ade80;font-size:15px">$${Number(d.amount).toFixed(2)}</td>
@@ -1084,7 +1083,7 @@ function openDepositReview(did) {
   selectedDepositId = did;
   document.getElementById('dr-err').style.display = 'none';
   document.getElementById('dr-note').value = '';
-  sb.from('deposit_requests').select('*').eq('id', did).single().then(function(res) {
+  sb.rpc('admin_get_deposit', { d_id: did }).then(function(res) {
     var d = res.data;
     if (!d) return;
     var users = {};
@@ -1120,14 +1119,13 @@ async function doDepositReview(status) {
 // ── Transfers ─────────────────────────────────────────
 async function loadTransfers() {
   const status = document.getElementById('transfer-filter').value;
-  let q = sb.from('transfer_requests').select('*').order('created_at',{ascending:false});
-  if (status) q = q.eq('status', status);
-  const { data } = await q;
+  const { data } = await sb.rpc('admin_get_all_transfers');
   const users = {};
   allUsers.forEach(u => users[u.id] = u.email);
   const tb = document.getElementById('transfers-tbody');
-  if (!data || !data.length) { tb.innerHTML = '<tr><td colspan="8"><div class="empty"><div class="empty-icon">✅</div><div class="empty-text">No transfer requests</div></div></td></tr>'; return; }
-  tb.innerHTML = data.map(t => `
+  const rows = (data || []).filter(t => !status || t.status === status);
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="8"><div class="empty"><div class="empty-icon">✅</div><div class="empty-text">No transfer requests</div></div></td></tr>'; return; }
+  tb.innerHTML = rows.map(t => `
     <tr>
       <td>${users[t.user_id]||t.user_id.substring(0,8)}</td>
       <td style="font-weight:700;color:#f1f5f9">$${Number(t.amount).toFixed(2)}</td>
@@ -1145,7 +1143,7 @@ function openTransferReview(tid) {
   document.getElementById('tr-err').style.display='none';
   document.getElementById('tr-note').value='';
   // Fetch transfer details inline
-  sb.from('transfer_requests').select('*').eq('id', tid).single().then(({data:t}) => {
+  sb.rpc('admin_get_transfer', { t_id: tid }).then(({data:t}) => {
     const users = {};
     allUsers.forEach(u => users[u.id] = u.email);
     document.getElementById('tr-details').innerHTML = `
@@ -1173,14 +1171,13 @@ async function doTransferReview(status) {
 // ── Loans ─────────────────────────────────────────────
 async function loadLoans() {
   const status = document.getElementById('loan-filter').value;
-  let q = sb.from('loan_applications').select('*').order('created_at',{ascending:false});
-  if (status) q = q.eq('status', status);
-  const { data } = await q;
+  const { data } = await sb.rpc('admin_get_all_loans');
   const users = {};
   allUsers.forEach(u => users[u.id] = u.email);
   const tb = document.getElementById('loans-tbody');
-  if (!data || !data.length) { tb.innerHTML = '<tr><td colspan="8"><div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No loan applications</div></div></td></tr>'; return; }
-  tb.innerHTML = data.map(l => `
+  const rows = (data || []).filter(l => !status || l.status === status);
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="8"><div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No loan applications</div></div></td></tr>'; return; }
+  tb.innerHTML = rows.map(l => `
     <tr>
       <td>${users[l.user_id]||l.user_id.substring(0,8)}</td>
       <td style="font-weight:700;color:#f1f5f9">$${Number(l.amount).toFixed(2)}</td>
@@ -1197,7 +1194,7 @@ function openLoanReview(lid) {
   selectedLoanId = lid;
   document.getElementById('lr-err').style.display='none';
   document.getElementById('lr-note').value='';
-  sb.from('loan_applications').select('*').eq('id', lid).single().then(({data:l}) => {
+  sb.rpc('admin_get_loan', { l_id: lid }).then(({data:l}) => {
     const users = {};
     allUsers.forEach(u => users[u.id] = u.email);
     document.getElementById('lr-details').innerHTML = `
@@ -1225,14 +1222,13 @@ async function doLoanReview(status) {
 // ── Tickets ───────────────────────────────────────────
 async function loadTickets() {
   const status = document.getElementById('ticket-filter').value;
-  let q = sb.from('support_tickets').select('*').order('created_at',{ascending:false});
-  if (status) q = q.eq('status', status);
-  const { data } = await q;
+  const { data } = await sb.rpc('admin_get_all_tickets');
   const users = {};
   allUsers.forEach(u => users[u.id] = u.email);
   const tb = document.getElementById('tickets-tbody');
-  if (!data || !data.length) { tb.innerHTML = '<tr><td colspan="6"><div class="empty"><div class="empty-icon">🎫</div><div class="empty-text">No support tickets</div></div></td></tr>'; return; }
-  tb.innerHTML = data.map(t => `
+  const rows = (data || []).filter(t => !status || t.status === status);
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="6"><div class="empty"><div class="empty-icon">🎫</div><div class="empty-text">No support tickets</div></div></td></tr>'; return; }
+  tb.innerHTML = rows.map(t => `
     <tr>
       <td>${users[t.user_id]||t.user_id.substring(0,8)}</td>
       <td style="max-width:160px;white-space:normal;color:#e2e8f0">${t.subject}</td>
@@ -1247,7 +1243,7 @@ function openTicketReply(tid) {
   selectedTicketId = tid;
   document.getElementById('tk-err').style.display='none';
   document.getElementById('tk-reply').value='';
-  sb.from('support_tickets').select('*').eq('id', tid).single().then(({data:t}) => {
+  sb.rpc('admin_get_ticket', { t_id: tid }).then(({data:t}) => {
     const users = {};
     allUsers.forEach(u => users[u.id] = u.email);
     document.getElementById('tk-details').innerHTML = `
@@ -1296,13 +1292,11 @@ async function doSendMessage() {
   if (!subject) { showAlert('msg-err', 'Please enter a subject'); return; }
   if (!body) { showAlert('msg-err', 'Please write a message'); return; }
   setLoading('msg-btn', true, 'Sending...');
-  const { error } = await sb.from('support_tickets').insert({
-    user_id: selectedUserId,
-    category: category,
-    subject: subject,
-    message: 'Admin message',
-    admin_reply: body,
-    status: 'closed'
+  const { error } = await sb.rpc('admin_send_message', {
+    target_user: selectedUserId,
+    p_subject: subject,
+    p_body: body,
+    p_category: category
   });
   setLoading('msg-btn', false, 'Send Message');
   if (error) { showAlert('msg-err', error.message); return; }
@@ -1315,7 +1309,7 @@ async function doSendMessage() {
 
 // ── Transactions ──────────────────────────────────────
 async function loadTxns() {
-  const { data } = await sb.from('transactions').select('*').order('created_at',{ascending:false}).limit(200);
+  const { data } = await sb.rpc('admin_get_all_transactions');
   allTxns = data || [];
   renderTxns(allTxns);
   // Recent activity on dashboard
