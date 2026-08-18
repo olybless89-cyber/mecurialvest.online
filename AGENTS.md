@@ -124,18 +124,34 @@ Fix (in repo):
 
 ## Digit-free account number (2026-08)
 The signup trigger `handle_new_user()` used to mint `MV` + 8 random digits
-(e.g. `MV71484459`). The UI already surfaces the shared `WALLET_ADDRESS`
-constant (`bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh`) on the ATM card, the
-balance card, the "Your Wallet Address" deposit box, and the admin user
-"Wallet" column — no numeric account number is shown anywhere in the HTML.
-The trigger now generates a **letters-only (digits-free)** `account_number`
-(`MV` + 8 random `a-z`), so no digits-only account number is generated either.
-Old users keep their legacy numeric value; only new signups get the digit-free
-form. Also redefined in `003_...sql` above.
+(e.g. `MV71484459`). Migration `003_...sql` redefined it to mint a
+**letters-only (digits-free)** `account_number` (`MV` + 8 random `a-z`) for new
+signups. Migration `004_backfill_digit_free_account_numbers.sql` normalizes any
+**pre-existing** profile whose `account_number` still contains a digit into a
+fresh letters-only value (idempotent). Apply `004` once in the Supabase SQL
+editor to backfill legacy users.
+
+### Account number vs. wallet address — display rule
+The UI surfaces the user's **real `account_number`** in all account-number
+spots, and the shared `WALLET_ADDRESS` constant
+(`bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh`) **only** in the BTC deposit
+context. Specifically:
+- Dashboard sidebar `ID:` → `account_number`
+- Dashboard balance card (label "Account Number") → `account_number`
+- Dashboard ATM card (`•••• •••• ` + last 4) → last 4 of `account_number`
+- Dashboard Profile modal (label "Account Number") → `account_number`
+- Dashboard deposit "Your Wallet Address (use this to add funds)" box →
+  `WALLET_ADDRESS` (BTC deposit destination — correct, keep)
+- Admin "All Users" table column "Account" → each user's `account_number`
+  (relabelled from "Wallet")
+- Admin manage-user modal field "Account" → selected user's `account_number`
+
+Do NOT put the wallet address in any account-number spot again — that was the
+"wallet address showing where normal account number should be" bug.
 
 ## Full schema reference
 `SQL/supabase/002_full_app_schema.sql` is the complete, current schema
 (tables, RLS, signup trigger, all 11 RPCs) as a single idempotent file. It is a
 reference/integration-testing artifact — the live project is NOT migrated from
-it wholesale. Incremental migrations (`001`, `003`) are what get applied to the
-live Supabase project via the SQL editor.
+it wholesale. Incremental migrations (`001`, `003`, `004`) are what get applied
+to the live Supabase project via the SQL editor.
