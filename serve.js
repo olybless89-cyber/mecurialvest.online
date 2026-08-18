@@ -24,8 +24,11 @@ const PUBLIC = path.resolve(__dirname, 'public');
 const PORT = Number(process.env.PORT || 12000);
 const SUPABASE_API_URL = (process.env.SUPABASE_API_URL || 'http://127.0.0.1:54321').replace(/\/$/, '');
 
-// Local self-hosted Supabase anon key (public, demo project).
-const LOCAL_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
+// Local self-hosted Supabase anon key (public, demo project). Override with
+// SUPABASE_ANON_KEY when running against a self-hosted stack whose JWT secret
+// differs from the Supabase CLI default.
+const LOCAL_ANON_KEY = process.env.SUPABASE_ANON_KEY
+  || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
 
 // The hosted project values embedded in the committed HTML. We replace these
 // at serve time so the browser talks to the /supa proxy instead.
