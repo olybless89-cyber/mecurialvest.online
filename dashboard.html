@@ -446,7 +446,7 @@ footer{background:var(--white);border-top:1px solid var(--border);padding:14px 2
                 </div>
                 <div>
                   <div style="display:flex;align-items:center;gap:8px">
-                    <span style="font-size:11px;opacity:.6">Your Wallet Address</span>
+                    <span style="font-size:11px;opacity:.6">Account Number</span>
                     <span id="bc-status-badge" style="background:rgba(239,68,68,.2);color:#fca5a5;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px">Inactive</span>
                   </div>
                   <div class="bc-acct-num" id="bc-acct-num" style="font-size:13px;letter-spacing:0;word-break:break-all">——————</div>
@@ -847,7 +847,7 @@ async function init(){
     // Sidebar
     document.getElementById('sb-avatar').textContent=initial;
     document.getElementById('sb-name').textContent=name;
-    document.getElementById('sb-acct-short').textContent=walletShort();
+    document.getElementById('sb-acct-short').textContent=p.account_number||'—';
     // KYC badge
     const kyc=p.kyc_status||'unverified';
     const kycEl=document.getElementById('kyc-badge');
@@ -861,14 +861,14 @@ async function init(){
     document.getElementById('st-limit').textContent='$'+(p.transaction_limit||500000).toLocaleString('en');
     document.getElementById('bc-first-name').textContent=name.split(' ')[0];
     document.getElementById('bc-balance').textContent=bal+' USD';
-    document.getElementById('bc-acct-num').textContent=walletDisplay();
+    document.getElementById('bc-acct-num').textContent=p.account_number||'—';
     document.getElementById('rs-limit').textContent='$'+Number(p.transaction_limit||500000).toLocaleString('en',{minimumFractionDigits:2});
     var depAcctEl=document.getElementById('dep-acct-num');
     if(depAcctEl)depAcctEl.textContent=walletDisplay();
     var depRefEl=document.getElementById('dep-ref');
     if(depRefEl)depRefEl.textContent='REF-'+userId.substring(0,8).toUpperCase();
     document.getElementById('card-name').textContent=name.toUpperCase();
-    document.getElementById('card-num').textContent='•••• •••• '+WALLET_ADDRESS.slice(-4);
+    document.getElementById('card-num').textContent='•••• •••• '+(p.account_number||'').slice(-4);
     // Status badge on card
     const sb2=document.getElementById('bc-status-badge');
     if(p.status==='active'){sb2.style.background='rgba(74,222,128,.2)';sb2.style.color='#4ade80';sb2.textContent='Active';}
@@ -966,7 +966,7 @@ function openProfileModal(){
     <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" value="${userProfile.email}" disabled style="opacity:.6"></div>
     <div class="form-group"><label class="form-label">Phone</label><input class="form-input" type="tel" id="prof-phone" value="${userProfile.phone||''}"></div>
     <div style="background:#f8fafc;border:1.5px solid var(--border);border-radius:8px;padding:14px;font-size:13px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--muted)">Wallet Address</span><strong style="font-family:monospace;font-size:12px;word-break:break-all">${walletDisplay()}</strong></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--muted)">Account Number</span><strong style="font-family:monospace;font-size:12px;word-break:break-all">${userProfile.account_number||'—'}</strong></div>
       <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--muted)">KYC Status</span><span class="badge badge-${userProfile.kyc_status||'unverified'}">${userProfile.kyc_status||'unverified'}</span></div>
       <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Member Since</span><strong>${new Date(userProfile.created_at).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</strong></div>
     </div>`;

@@ -352,7 +352,7 @@ body{font-family:'Inter',sans-serif;background:#0b1120;color:#e2e8f0;min-height:
           <div class="overflow-x">
             <table class="tbl">
               <thead><tr>
-                <th>User</th><th>Wallet</th><th>Balance</th><th>Held</th>
+                <th>User</th><th>Account</th><th>Balance</th><th>Held</th>
                 <th>Status</th><th>KYC</th><th>Joined</th>
               </tr></thead>
               <tbody id="users-tbody">
@@ -510,7 +510,7 @@ body{font-family:'Inter',sans-serif;background:#0b1120;color:#e2e8f0;min-height:
         <div><div class="amt held" id="mu-held">$0.00</div><div class="lbl">Held Funds</div></div>
       </div>
       <div class="user-profile-grid">
-        <div class="info-item"><div class="label">Wallet</div><div class="value" id="mu-acct" style="font-family:monospace;font-size:11px;word-break:break-all">—</div></div>
+        <div class="info-item"><div class="label">Account</div><div class="value" id="mu-acct" style="font-family:monospace;font-size:11px;word-break:break-all">—</div></div>
         <div class="info-item"><div class="label">Status</div><div class="value" id="mu-status"></div></div>
         <div class="info-item"><div class="label">KYC</div><div class="value" id="mu-kyc"></div></div>
         <div class="info-item"><div class="label">Joined</div><div class="value" id="mu-joined">—</div></div>
@@ -854,7 +854,7 @@ function renderUsers(users) {
           </div>
         </div>
       </td>
-      <td style="font-family:monospace;font-size:12px">${walletShort()}</td>
+      <td style="font-family:monospace;font-size:12px">${u.account_number||'—'}</td>
       <td style="color:#4ade80;font-weight:700">$${Number(u.balance||0).toLocaleString('en',{minimumFractionDigits:2})}</td>
       <td style="color:#fbbf24">$${Number(u.held_funds||0).toLocaleString('en',{minimumFractionDigits:2})}</td>
       <td><span class="badge badge-${u.status}">${u.status}</span></td>
@@ -877,7 +877,7 @@ function openUserModal(uid) {
   document.getElementById('mu-email').textContent = u.email;
   document.getElementById('mu-balance').textContent = '$' + Number(u.balance||0).toLocaleString('en',{minimumFractionDigits:2});
   document.getElementById('mu-held').textContent = '$' + Number(u.held_funds||0).toLocaleString('en',{minimumFractionDigits:2});
-  document.getElementById('mu-acct').textContent = walletShort();
+  document.getElementById('mu-acct').textContent = u.account_number || '—';
   document.getElementById('mu-status').innerHTML = `<span class="badge badge-${u.status}">${u.status}</span>`;
   document.getElementById('mu-kyc').innerHTML = `<span class="badge badge-${u.kyc_status||'unverified'}">${u.kyc_status||'unverified'}</span>`;
   document.getElementById('mu-joined').textContent = new Date(u.created_at).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'});
