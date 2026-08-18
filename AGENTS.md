@@ -153,5 +153,49 @@ Do NOT put the wallet address in any account-number spot again — that was the
 `SQL/supabase/002_full_app_schema.sql` is the complete, current schema
 (tables, RLS, signup trigger, all 11 RPCs) as a single idempotent file. It is a
 reference/integration-testing artifact — the live project is NOT migrated from
-it wholesale. Incremental migrations (`001`, `003`, `004`) are what get applied
-to the live Supabase project via the SQL editor.
+it wholesale. Incremental migrations (`001`, `003`, `004`, `005`) are what get
+applied to the live Supabase project via the SQL editor.
+
+## Self-hosted Supabase via official docker-compose — 2026-08
+When there is **no** hosted Supabase access and no `supabase` CLI, the site can
+run against the official self-hosting stack
+(`https://github.com/supabase/supabase` `docker/docker-compose.yml`). Gotchas:
+
+- **First-run bind-mount bug:** the compose file bind-mounts several *files*
+  (e.g. `volumes/api/envoy/docker-entrypoint.sh`, `volumes/db/*.sql`,
+  `volumes/pooler/pooler.exs`). On first `compose up`, if the host path does
+  not exist as a file, Docker creates an **empty directory** there, and the
+  affected containers (envoy, auth, rest, pooler) fail to start with
+  `not a directory` / `password authentication failed for user
+  supabase_auth_admin`. Fix: `rm -rf` the stray dirs and drop the real files in
+  from the supabase repo, then `docker compose down && docker compose up -d`.
+  If the DB already mis-initialized, also wipe `volumes/db/data` and re-init so
+  the roles/init SQLs run.
+- **Anon key differs from the CLI default:** the official compose `.env`
+  ships its own `JWT_SECRET` + anon key (`...dc_X5iR_VP...`), which is NOT the
+  Supabase CLI demo key (`...CRXP1A7WO...`) baked into `serve.js`. Start
+  `serve.js` with the matching env overrides:
+  `SUPABASE_API_URL=http://127.0.0.1:8000 \
+   SUPABASE_ANON_KEY=<.env ANON_KEY> PORT=12000 node serve.js`
+  (the API gateway is on port **8000**, not the CLI's 54321). `serve.js`
+  honors `SUPABASE_ANON_KEY` to rewrite the embedded client config.
+- **Apply app schema to the fresh DB** before testing: run
+  `SQL/supabase/002_full_app_schema.sql` then `003`, `004`, `005` (in order)
+  via `docker exec supabase-db psql -U postgres -d postgres -f <file>`.
+- **Seed an admin** by inserting into `auth.users` (bcrypt password via
+  `crypt('pw', gen_salt('bf'))`, `email_confirmed_at=now()`, `role='authenticated'`)
+  then upserting the `profiles` row with `role='admin'`. The signup trigger
+  otherwise defaults new `profiles.role` to `user`.
+
+## Migration 005 — admin_get_all_users role ambiguity (standalone) — 2026-08
+`SQL/supabase/005_fix_admin_get_all_users_role_ambiguity.sql` is the
+authoritative, standalone redefinition of the admin user-management RPCs:
+- `admin_get_all_users()` — `SECURITY DEFINER`, `set search_path = public`,
+  table-qualified `p.role` in the WHERE clause to eliminate the PL/pgSQL
+  name clash (the original "column reference \"role\" is ambiguous" error).
+- `admin_set_user_status(target_id uuid, new_status text)` — `SECURITY
+  DEFINER` (bypasses RLS so admins can activate/deactivate any user), with
+  admin-only guard + a self-status-change block (errcode 44000).
+- Ensures `admin@mercurialvest.online` / `admin@gmail.com` have `role='admin'`.
+Verified live in-browser: All Users lists every user (no RLS banner), and the
+toggle status button flips users active↔inactive through the RPC.
