@@ -229,6 +229,11 @@ body{font-family:'Inter',sans-serif;background:#0b1120;color:#e2e8f0;min-height:
         Loans
         <span class="nav-badge" id="nb-loans">0</span>
       </a>
+      <a class="nav-item" onclick="showSection('livechat')" href="#">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Live Chat
+        <span class="nav-badge" id="nb-livechat" style="display:none">0</span>
+      </a>
       <a class="nav-item" onclick="showSection('tickets')" href="#">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         Support Tickets
@@ -411,6 +416,56 @@ body{font-family:'Inter',sans-serif;background:#0b1120;color:#e2e8f0;min-height:
               </tr></thead>
               <tbody id="loans-tbody"></tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ LIVE CHAT ═══════════ -->
+      <div class="section" id="section-livechat">
+        <div class="section-title">💬 Live Chat</div>
+        <div class="section-sub">Real-time support conversations with users.</div>
+        <div style="display:grid;grid-template-columns:300px 1fr;gap:18px;height:calc(100vh - 180px);min-height:480px">
+          <!-- Chat session list -->
+          <div style="background:#0f1b2d;border:1.5px solid #1e2d4a;border-radius:14px;display:flex;flex-direction:column;overflow:hidden">
+            <div style="padding:14px 16px;border-bottom:1px solid #1e2d4a;display:flex;align-items:center;justify-content:space-between">
+              <span style="color:#e2e8f0;font-weight:700;font-size:14px">Conversations</span>
+              <button class="btn btn-ghost btn-sm" onclick="loadLiveChats()">↻ Refresh</button>
+            </div>
+            <div style="overflow-y:auto;flex:1" id="lc-session-list">
+              <div style="padding:24px;text-align:center;color:#64748b;font-size:13px">Loading…</div>
+            </div>
+          </div>
+          <!-- Chat window -->
+          <div style="background:#0f1b2d;border:1.5px solid #1e2d4a;border-radius:14px;display:flex;flex-direction:column;overflow:hidden" id="lc-window">
+            <div style="flex:1;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:13px;flex-direction:column;gap:8px" id="lc-empty-state">
+              <div style="font-size:36px">💬</div>
+              <div>Select a conversation to reply</div>
+            </div>
+            <!-- Chat messages pane (hidden until session selected) -->
+            <div style="display:none;flex-direction:column;height:100%" id="lc-chat-pane">
+              <div style="padding:14px 18px;border-bottom:1px solid #1e2d4a;display:flex;align-items:center;gap:10px">
+                <div style="width:34px;height:34px;border-radius:50%;background:#1e3a8a;display:flex;align-items:center;justify-content:center;color:#93c5fd;font-weight:700;font-size:14px" id="lc-user-avatar">U</div>
+                <div>
+                  <div style="color:#e2e8f0;font-weight:700;font-size:14px" id="lc-user-name">User</div>
+                  <div style="color:#64748b;font-size:12px" id="lc-user-email"></div>
+                </div>
+                <div style="margin-left:auto;display:flex;gap:8px">
+                  <select id="lc-status-sel" class="search-box" style="width:130px;font-size:12px" onchange="updateLcStatus()">
+                    <option value="open">Open</option>
+                    <option value="pending">Pending</option>
+                    <option value="closed">Resolved</option>
+                  </select>
+                </div>
+              </div>
+              <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:#0a1525" id="lc-msgs"></div>
+              <div style="padding:12px 14px;border-top:1px solid #1e2d4a;background:#0f1b2d;display:flex;gap:8px;align-items:flex-end">
+                <textarea id="lc-reply-input" placeholder="Type your reply…" rows="2"
+                  style="flex:1;background:#1e2d4a;border:1.5px solid #2d3f5e;border-radius:10px;color:#e2e8f0;padding:9px 12px;font-size:13px;resize:none;outline:none;font-family:inherit"
+                  onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendLcReply();}"></textarea>
+                <button class="btn btn-primary btn-sm" id="lc-send-btn" onclick="sendLcReply()">Send</button>
+              </div>
+              <div class="alert alert-error" id="lc-err" style="display:none;margin:0 14px 10px"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -1325,6 +1380,176 @@ function doLogout() { sb.auth.signOut().then(()=>window.location.replace('/login
 
 // Close modal on overlay click
 document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if(e.target===o) closeModal(o.id); }));
+
+// ── Live Chat Admin ────────────────────────────────────────────────────────
+let lcSessions = [];
+let lcSelectedId = null;
+let lcPollingTimer = null;
+
+async function loadLiveChats() {
+  const list = document.getElementById('lc-session-list');
+  list.innerHTML = '<div style="padding:16px;text-align:center;color:#64748b;font-size:13px">Loading…</div>';
+  const { data, error } = await sb
+    .from('support_tickets')
+    .select('*')
+    .eq('category', 'live_chat')
+    .order('updated_at', { ascending: false });
+  if (error || !data) { list.innerHTML = '<div style="padding:16px;color:#f87171;font-size:13px">Error loading chats</div>'; return; }
+  lcSessions = data;
+
+  // Badge count
+  const openCount = data.filter(t => t.status === 'open').length;
+  const badge = document.getElementById('nb-livechat');
+  if (openCount > 0) { badge.style.display = 'inline-flex'; badge.textContent = openCount; }
+  else { badge.style.display = 'none'; }
+
+  if (!data.length) {
+    list.innerHTML = '<div style="padding:24px;text-align:center;color:#64748b;font-size:13px">No live chat sessions yet</div>';
+    return;
+  }
+
+  const users = {};
+  allUsers.forEach(u => { users[u.id] = u; });
+
+  list.innerHTML = data.map(t => {
+    const u = users[t.user_id];
+    const name = u ? (u.full_name || u.email) : t.user_id.substring(0, 8);
+    const initials = (name[0] || 'U').toUpperCase();
+    const isOpen = t.status === 'open';
+    const preview = lcPreview(t);
+    const selected = t.id === lcSelectedId ? 'background:#1e2d4a;' : '';
+    return `<div onclick="selectLcSession('${t.id}')" style="padding:13px 16px;border-bottom:1px solid #1a2640;cursor:pointer;${selected}border-left:3px solid ${isOpen ? '#2563eb' : '#1e2d4a'}">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:4px">
+        <div style="width:28px;height:28px;border-radius:50%;background:#1e3a8a;display:flex;align-items:center;justify-content:center;color:#93c5fd;font-weight:700;font-size:11px;flex-shrink:0">${initials}</div>
+        <div style="flex:1;min-width:0">
+          <div style="color:#e2e8f0;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(name)}</div>
+        </div>
+        <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${isOpen ? '#1e3a8a' : '#1e2d4a'};color:${isOpen ? '#93c5fd' : '#64748b'}">${t.status}</span>
+      </div>
+      <div style="color:#64748b;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:37px">${esc(preview)}</div>
+    </div>`;
+  }).join('');
+}
+
+function lcPreview(t) {
+  const lines = (t.message || '').split('\n---\n').filter(l => l && l !== '__chat_init__');
+  if (!lines.length) return t.admin_reply || '(no messages yet)';
+  const last = lines[lines.length - 1].replace(/^\[(admin|user)\]\s*/, '').replace(/\s*\[\d{4}-[^\]]+\]$/, '');
+  return last.slice(0, 60);
+}
+
+function selectLcSession(id) {
+  lcSelectedId = id;
+  const t = lcSessions.find(x => x.id === id);
+  if (!t) return;
+  const users = {}; allUsers.forEach(u => { users[u.id] = u; });
+  const u = users[t.user_id];
+  const name = u ? (u.full_name || u.email) : t.user_id.substring(0, 8);
+  const initials = (name[0] || 'U').toUpperCase();
+
+  document.getElementById('lc-empty-state').style.display = 'none';
+  document.getElementById('lc-chat-pane').style.display = 'flex';
+  document.getElementById('lc-user-avatar').textContent = initials;
+  document.getElementById('lc-user-name').textContent = name;
+  document.getElementById('lc-user-email').textContent = u ? u.email : '';
+  document.getElementById('lc-status-sel').value = t.status;
+  document.getElementById('lc-err').style.display = 'none';
+  document.getElementById('lc-reply-input').value = '';
+
+  renderLcMsgs(t);
+  // Refresh session list to highlight selection
+  loadLiveChats();
+  // Poll for new messages every 4s while this session is open
+  clearInterval(lcPollingTimer);
+  lcPollingTimer = setInterval(() => pollLcSession(id), 4000);
+}
+
+async function pollLcSession(id) {
+  if (lcSelectedId !== id) { clearInterval(lcPollingTimer); return; }
+  const { data } = await sb.from('support_tickets').select('*').eq('id', id).single();
+  if (data) {
+    const idx = lcSessions.findIndex(x => x.id === id);
+    if (idx >= 0) lcSessions[idx] = data;
+    renderLcMsgs(data);
+  }
+}
+
+function renderLcMsgs(t) {
+  const msgs = parseLcMsgs(t);
+  const el = document.getElementById('lc-msgs');
+  if (!msgs.length) {
+    el.innerHTML = '<div style="flex:1;display:flex;align-items:center;justify-content:center;color:#475569;font-size:13px">No messages yet — waiting for user…</div>';
+    return;
+  }
+  el.innerHTML = msgs.map(m => {
+    const isAdmin = m.side === 'admin';
+    return `<div style="display:flex;flex-direction:column;align-items:${isAdmin ? 'flex-end' : 'flex-start'};gap:2px;max-width:100%">
+      <div style="max-width:75%;padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.5;word-break:break-word;
+        ${isAdmin ? 'background:#1e40af;color:#eff6ff;border-bottom-right-radius:3px' : 'background:#1e2d4a;color:#e2e8f0;border-bottom-left-radius:3px'}">${esc(m.text)}</div>
+      <div style="font-size:10px;color:#475569">${isAdmin ? 'You' : 'User'} · ${m.time ? new Date(m.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : ''}</div>
+    </div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function parseLcMsgs(t) {
+  const out = [];
+  (t.message || '').split('\n---\n').forEach(chunk => {
+    if (!chunk || chunk === '__chat_init__') return;
+    const isAdmin = chunk.startsWith('[admin]');
+    out.push({
+      side: isAdmin ? 'admin' : 'user',
+      text: chunk.replace(/^\[(admin|user)\]\s*/, '').replace(/\s*\[\d{4}-[^\]]+\]$/, '').trim(),
+      time: t.updated_at
+    });
+  });
+  if (t.admin_reply && !out.find(m => m.side === 'admin' && m.text === t.admin_reply)) {
+    out.push({ side: 'admin', text: t.admin_reply, time: t.updated_at });
+  }
+  return out;
+}
+
+async function sendLcReply() {
+  const text = document.getElementById('lc-reply-input').value.trim();
+  if (!text || !lcSelectedId) return;
+  setLoading('lc-send-btn', true, '…');
+  document.getElementById('lc-err').style.display = 'none';
+
+  const t = lcSessions.find(x => x.id === lcSelectedId);
+  const prev = t ? (t.message || '') : '';
+  const updated = prev + '\n---\n[admin] ' + text + ' [' + new Date().toISOString() + ']';
+  const { error } = await sb.from('support_tickets').update({
+    message: updated,
+    admin_reply: text,
+    status: document.getElementById('lc-status-sel').value,
+    updated_at: new Date().toISOString()
+  }).eq('id', lcSelectedId);
+  setLoading('lc-send-btn', false, 'Send');
+  if (error) { showAlert('lc-err', error.message); return; }
+  document.getElementById('lc-reply-input').value = '';
+  // Update local state & re-render immediately
+  if (t) {
+    t.message = updated;
+    t.admin_reply = text;
+    renderLcMsgs(t);
+  }
+}
+
+async function updateLcStatus() {
+  if (!lcSelectedId) return;
+  const newStatus = document.getElementById('lc-status-sel').value;
+  await sb.from('support_tickets').update({ status: newStatus }).eq('id', lcSelectedId);
+  const t = lcSessions.find(x => x.id === lcSelectedId);
+  if (t) t.status = newStatus;
+  loadLiveChats();
+}
+
+// Override showSection to load live chats on nav
+const _origShowSection = showSection;
+function showSection(id) {
+  _origShowSection.call(this, id);
+  if (id === 'livechat') loadLiveChats();
+}
 
 init();
 </script>

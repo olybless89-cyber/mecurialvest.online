@@ -1,0 +1,67 @@
+name: Deploy to Vercel + Run Supabase Migrations
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  # ─────────────────────────────────────────────────
+  # JOB 1: Run SQL migrations against Supabase
+  # ─────────────────────────────────────────────────
+  migrate:
+    name: Run SQL Migrations
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        run: |
+          curl -sSL https://github.com/supabase/cli/releases/latest/download/supabase_linux_amd64.tar.gz \
+            | tar -xz -C /usr/local/bin supabase
+          supabase --version
+
+      - name: Run all pending SQL migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          echo "Running migrations on project: $SUPABASE_PROJECT_REF"
+          for file in $(ls SQL/supabase/*.sql | sort); do
+            echo "──────────────────────────────────────"
+            echo "▶ Applying: $file"
+            supabase db execute \
+              --project-ref "$SUPABASE_PROJECT_REF" \
+              --password "$SUPABASE_DB_PASSWORD" \
+              < "$file" \
+              && echo "✅ Done: $file" \
+              || echo "⚠️  Skipped (already applied or error): $file"
+          done
+
+  # ─────────────────────────────────────────────────
+  # JOB 2: Deploy frontend to Vercel
+  # Runs after migrations succeed
+  # ─────────────────────────────────────────────────
+  deploy:
+    name: Deploy Frontend to Vercel
+    runs-on: ubuntu-latest
+    needs: migrate
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Deploy to Vercel (Production)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+          vercel build --prod --token=$VERCEL_TOKEN
+          vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
