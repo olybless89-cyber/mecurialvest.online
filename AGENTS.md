@@ -72,7 +72,42 @@ Fix (in repo):
   `admin_set_user_status` RPC instead of the RLS-blocked direct update.
 Other admin management RPCs already work via SECURITY DEFINER:
 `admin_update_kyc`, `admin_credit_user`, `admin_hold_funds`, `admin_release_hold`,
-`admin_review_deposit`, `admin_review_transfer`, `admin_review_loan`,
 `admin_reply_ticket`, `admin_get_stats`. Cross-user-readable tables (no RLS
 own-row restriction): `support_tickets`, `transactions`, `deposit_requests`,
 `transfer_requests`, `loan_applications`.
+
+## Admin review RPCs — `note` ambiguity bug + fix (2026-08)
+The three admin review RPCs (`admin_review_deposit`, `admin_review_transfer`,
+`admin_review_loan`) had the SAME class of PL/pgSQL name-clash bug as the
+`role` issue: each took a `note text` parameter and did `set ..., note = note`
+in the UPDATE. Postgres raised `column reference "note" is ambiguous`
+(code 42702) because it could not decide between the `note` parameter and the
+`*.note` table column on the RHS — so approving/rejecting any deposit, transfer,
+or loan silently failed for everyone.
+Fix (in repo):
+- `SQL/supabase/003_fix_review_rpc_note_ambiguity_and_digit_free_account.sql`
+  redefines all three as SECURITY DEFINER with a local `v_note text := note`
+  variable (breaks the param/column collision) and uses `set ..., note = v_note`
+  in the UPDATE. Same signatures the client expects, idempotent. **Must be
+  applied in the Supabase SQL editor once.**
+- Verified end-to-end against a local self-hosted Supabase stack: deposit
+  approve credits balance + logs a `deposit` transaction + saves note; loan
+  approve credits balance; transfer reject saves note without debiting.
+
+## Digit-free account number (2026-08)
+The signup trigger `handle_new_user()` used to mint `MV` + 8 random digits
+(e.g. `MV71484459`). The UI already surfaces the shared `WALLET_ADDRESS`
+constant (`bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh`) on the ATM card, the
+balance card, the "Your Wallet Address" deposit box, and the admin user
+"Wallet" column — no numeric account number is shown anywhere in the HTML.
+The trigger now generates a **letters-only (digits-free)** `account_number`
+(`MV` + 8 random `a-z`), so no digits-only account number is generated either.
+Old users keep their legacy numeric value; only new signups get the digit-free
+form. Also redefined in `003_...sql` above.
+
+## Full schema reference
+`SQL/supabase/002_full_app_schema.sql` is the complete, current schema
+(tables, RLS, signup trigger, all 11 RPCs) as a single idempotent file. It is a
+reference/integration-testing artifact — the live project is NOT migrated from
+it wholesale. Incremental migrations (`001`, `003`) are what get applied to the
+live Supabase project via the SQL editor.
