@@ -13,10 +13,13 @@ Click **"New repository secret"** for each one below:
 |---|---|
 | `SUPABASE_ACCESS_TOKEN` | https://supabase.com/dashboard/account/tokens → "Generate new token" |
 | `SUPABASE_PROJECT_REF` | Your project ref ID (e.g. `pvpoedxkoyatenqayzyt`) |
-| `SUPABASE_DB_PASSWORD` | Supabase Dashboard → Project Settings → Database → Database password |
 | `VERCEL_TOKEN` | https://vercel.com/account/tokens → "Create Token" |
 | `VERCEL_ORG_ID` | Run `vercel whoami` or check `.vercel/project.json` after `vercel link` |
 | `VERCEL_PROJECT_ID` | Run `vercel link` in repo root → stored in `.vercel/project.json` |
+
+> Note: a DB password is no longer required. Migrations run through the
+> Supabase Management API `executeSql` endpoint using only the access token +
+> project ref.
 
 ## How to get VERCEL_ORG_ID and VERCEL_PROJECT_ID
 
