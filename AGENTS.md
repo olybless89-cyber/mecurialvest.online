@@ -104,6 +104,38 @@ Other admin management RPCs already work via SECURITY DEFINER:
 own-row restriction): `support_tickets`, `transactions`, `deposit_requests`,
 `transfer_requests`, `loan_applications`.
 
+## Admin approval-table reads — same RLS bug class, fixed (2026-08)
+The note above that the approval tables are "cross-user-readable" was **wrong**
+for this stack. In the live/self-hosted schema ALL five approval tables
+(`deposit_requests`, `transfer_requests`, `loan_applications`,
+`support_tickets`, `transactions`) have own-row-only SELECT RLS
+(`auth.uid() = user_id`). So the admin dashboard's direct client reads
+(`sb.from('<table>').select('*')` in `loadDeposits/loadTransfers/loadLoans/
+loadTickets/loadTxns` and the review-detail fetches) could only ever return
+the admin's OWN rows — every approval table appeared empty even when rows
+existed (the SECURITY DEFINER `admin_get_stats` counted them, but the list
+reads were RLS-blocked). Same root cause as the All Users bug.
+Fix (in repo):
+- `SQL/supabase/006_admin_read_all_rpcs.sql` adds SECURITY DEFINER, admin-guarded
+  RPCs: `admin_get_all_{deposits,transfers,loans,tickets,transactions}`,
+  single-row `admin_get_{deposit,transfer,loan,ticket}`, and
+  `admin_send_message(target_user, p_subject, p_body, p_category)`. Guarded to
+  no-op when `public.profiles` is absent; idempotent. **Must be applied in the
+  Supabase SQL editor once.**
+- `admin.html` (+ `public/admin.html`) `load*()` now call the read-all RPCs and
+  filter client-side; review-detail fetches use `admin_get_<entity>`;
+  `doSendMessage` uses `admin_send_message` (cross-user insert was RLS-blocked).
+Known remaining gaps (NOT yet fixed, same RLS class):
+- **Live Chat** subsystem (`loadLiveChats`, `pollLcSession`, `sendLcReply`,
+  `updateLcStatus`) still reads/updates `support_tickets` directly from the
+  client -> cross-user ops RLS-blocked. Needs SECURITY DEFINER
+  `admin_get_live_chats` + `admin_append_ticket_message`/`admin_set_ticket_status`.
+- `transactions` column is `description`, but `admin.html` `renderTxns`/activity
+  uses `t.reason` -> admin txn "reason" column shows "-". (user dashboard uses the
+  right column.) Minor display bug.
+- User drawer does not auto-refresh after status toggle (cosmetic; DB + table
+  are correct).
+
 ## Admin review RPCs — `note` ambiguity bug + fix (2026-08)
 The three admin review RPCs (`admin_review_deposit`, `admin_review_transfer`,
 `admin_review_loan`) had the SAME class of PL/pgSQL name-clash bug as the
