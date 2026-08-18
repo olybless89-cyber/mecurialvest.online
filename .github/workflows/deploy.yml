@@ -75,6 +75,19 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
 
+      - name: Link Vercel project (from secrets, if not already linked)
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          mkdir -p .vercel
+          if [ ! -f .vercel/project.json ] && [ -n "$VERCEL_ORG_ID" ] && [ -n "$VERCEL_PROJECT_ID" ]; then
+            printf '{"orgId":"%s","projectId":"%s","settings":{}}\n' \
+              "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
+            echo "Wrote .vercel/project.json from VERCEL_ORG_ID / VERCEL_PROJECT_ID"
+          fi
+          cat .vercel/project.json 2>/dev/null || echo "no project.json (Vercel secrets missing)"
+
       - name: Deploy to Vercel (Production)
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
