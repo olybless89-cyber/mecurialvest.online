@@ -763,6 +763,8 @@ const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 const WALLET_ADDRESS = 'bc1qxy2kgdygjrsq2n0yrf2493p83kkfjhx0wlh';
 function walletShort(){return WALLET_ADDRESS.slice(0,6)+'…'+WALLET_ADDRESS.slice(-4);}
 
+function esc(s){ s = (s===null||s===undefined)?'':String(s); return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
 let currentUser = null;
 let allUsers = [];
 let allTxns = [];
@@ -801,7 +803,9 @@ async function init() {
 }
 
 async function loadAll() {
-  await Promise.all([loadStats(), loadUsers(), loadDeposits(), loadTransfers(), loadLoans(), loadTickets(), loadTxns()]);
+  await loadUsers();
+  await loadTickets();
+  await Promise.all([loadStats(), loadDeposits(), loadTransfers(), loadLoans(), loadLiveChats(), loadTxns()]);
 }
 
 // ── Stats ─────────────────────────────────────────────
@@ -985,7 +989,7 @@ function openHoldModal() {
 async function openReleaseModal() {
   closeModal('modal-user');
   document.getElementById('release-err').style.display='none';
-  const { data: holds } = await sb.from('transactions').select('*').eq('user_id', selectedUserId).eq('type','hold').eq('status','active').order('created_at',{ascending:false});
+  const { data: holds } = await sb.rpc('admin_get_user_transactions', { target_uid: selectedUserId, filter_type: 'hold', filter_status: 'active' });
   const el = document.getElementById('active-holds-list');
   if (!holds || !holds.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">No active holds on this account.</div></div>'; }
   else {
@@ -993,7 +997,7 @@ async function openReleaseModal() {
       <div style="background:#0b1120;border:1px solid #1e2d4a;border-radius:8px;padding:14px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px">
         <div>
           <div style="font-weight:700;color:#fbbf24">$${Number(h.amount).toLocaleString('en',{minimumFractionDigits:2})}</div>
-          <div style="font-size:12px;color:#4a5568;margin-top:3px">${h.reason}</div>
+          <div style="font-size:12px;color:#4a5568;margin-top:3px">${h.description||'—'}</div>
           <div style="font-size:11px;color:#334155;margin-top:2px">${new Date(h.created_at).toLocaleDateString()}</div>
         </div>
         <button class="btn btn-success btn-sm" onclick="doRelease('${h.id}')">Release</button>
@@ -1004,12 +1008,12 @@ async function openReleaseModal() {
 
 async function openTxnHistory() {
   closeModal('modal-user');
-  const { data: txns } = await sb.from('transactions').select('*').eq('user_id', selectedUserId).order('created_at',{ascending:false}).limit(50);
+  const { data: txns } = await sb.rpc('admin_get_user_transactions', { target_uid: selectedUserId });
   const el = document.getElementById('txn-history-body');
   if (!txns || !txns.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No transactions yet.</div></div>'; }
   else {
     el.innerHTML = `<div class="overflow-x"><table class="tbl"><thead><tr><th>Type</th><th>Amount</th><th>Reason</th><th>Status</th><th>Date</th></tr></thead><tbody>` +
-      txns.map(t => `<tr><td><span class="badge badge-${t.type}">${t.type}</span></td><td style="font-weight:700;color:${t.type==='credit'?'#4ade80':t.type==='hold'?'#fbbf24':'#60a5fa'}">$${Number(t.amount).toFixed(2)}</td><td style="max-width:180px;white-space:normal">${t.reason||'—'}</td><td><span class="badge badge-${t.status}">${t.status}</span></td><td>${new Date(t.created_at).toLocaleDateString()}</td></tr>`).join('') +
+      txns.map(t => `<tr><td><span class="badge badge-${t.type}">${t.type}</span></td><td style="font-weight:700;color:${t.type==='credit'?'#4ade80':t.type==='hold'?'#fbbf24':'#60a5fa'}">$${Number(t.amount).toFixed(2)}</td><td style="max-width:180px;white-space:normal">${t.description||'—'}</td><td><span class="badge badge-${t.status}">${t.status}</span></td><td>${new Date(t.created_at).toLocaleDateString()}</td></tr>`).join('') +
       '</tbody></table></div>';
   }
   openModal('modal-txn-history');
@@ -1223,6 +1227,7 @@ async function doLoanReview(status) {
 async function loadTickets() {
   const status = document.getElementById('ticket-filter').value;
   const { data } = await sb.rpc('admin_get_all_tickets');
+  window._allTickets = data || [];
   const users = {};
   allUsers.forEach(u => users[u.id] = u.email);
   const tb = document.getElementById('tickets-tbody');
@@ -1322,7 +1327,7 @@ async function loadTxns() {
       <div class="activity-item">
         <div class="activity-dot ${t.type==='credit'?'dot-green':t.type==='hold'?'dot-yellow':t.type==='release'?'dot-blue':'dot-red'}"></div>
         <div class="activity-info">
-          <div class="activity-title">${t.reason||t.type}</div>
+          <div class="activity-title">${t.description||t.type}</div>
           <div class="activity-meta">${users[t.user_id]||'—'} · ${new Date(t.created_at).toLocaleDateString()}</div>
         </div>
         <div class="activity-amount ${t.type==='credit'||t.type==='release'?'amount-credit':'amount-debit'}">
@@ -1341,7 +1346,7 @@ function renderTxns(txns) {
       <td>${users[t.user_id]||t.user_id.substring(0,8)}</td>
       <td><span class="badge badge-${t.type}">${t.type}</span></td>
       <td style="font-weight:700;color:${t.type==='credit'?'#4ade80':t.type==='hold'?'#fbbf24':'#60a5fa'}">$${Number(t.amount).toFixed(2)}</td>
-      <td style="max-width:200px;white-space:normal;font-size:12px">${t.reason||'—'}</td>
+      <td style="max-width:200px;white-space:normal;font-size:12px">${t.description||'—'}</td>
       <td><span class="badge badge-${t.status}">${t.status}</span></td>
       <td>${new Date(t.created_at).toLocaleDateString()}</td>
     </tr>`).join('');
@@ -1357,6 +1362,7 @@ function filterTxns() {
 // ── UI Helpers ────────────────────────────────────────
 function showSection(id) {
   if (id === 'deposits') loadDeposits();
+  if (id === 'livechat') loadLiveChats();
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById('section-' + id).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -1382,22 +1388,32 @@ let lcPollingTimer = null;
 
 async function loadLiveChats() {
   const list = document.getElementById('lc-session-list');
+  if (!list) { console.error('lc-session-list not found'); return; }
   list.innerHTML = '<div style="padding:16px;text-align:center;color:#64748b;font-size:13px">Loading…</div>';
-  const { data, error } = await sb
-    .from('support_tickets')
-    .select('*')
-    .eq('category', 'live_chat')
-    .order('updated_at', { ascending: false });
-  if (error || !data) { list.innerHTML = '<div style="padding:16px;color:#f87171;font-size:13px">Error loading chats</div>'; return; }
-  lcSessions = data;
+  let data = window._allTickets;
+  if (!data) {
+    try {
+      const { data: d, error } = await Promise.race([
+        sb.rpc('admin_get_all_tickets'),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('Request timed out')), 12000))
+      ]);
+      if (error) { list.innerHTML = '<div style="padding:16px;color:#f87171;font-size:13px">Error: ' + esc(error.message) + '</div>'; return; }
+      data = d || [];
+      window._allTickets = data;
+    } catch (e) {
+      list.innerHTML = '<div style="padding:16px;color:#f87171;font-size:13px">Error: ' + esc(e.message || String(e)) + '</div>'; return;
+    }
+  }
+  const tickets = (data || []).filter(t => t.category === 'live_chat').sort((a,b) => (b.updated_at||'').localeCompare(a.updated_at||''));
+  lcSessions = tickets;
 
   // Badge count
-  const openCount = data.filter(t => t.status === 'open').length;
+  const openCount = tickets.filter(t => t.status === 'open').length;
   const badge = document.getElementById('nb-livechat');
   if (openCount > 0) { badge.style.display = 'inline-flex'; badge.textContent = openCount; }
   else { badge.style.display = 'none'; }
 
-  if (!data.length) {
+  if (!tickets.length) {
     list.innerHTML = '<div style="padding:24px;text-align:center;color:#64748b;font-size:13px">No live chat sessions yet</div>';
     return;
   }
@@ -1405,7 +1421,7 @@ async function loadLiveChats() {
   const users = {};
   allUsers.forEach(u => { users[u.id] = u; });
 
-  list.innerHTML = data.map(t => {
+  list.innerHTML = tickets.map(t => {
     const u = users[t.user_id];
     const name = u ? (u.full_name || u.email) : t.user_id.substring(0, 8);
     const initials = (name[0] || 'U').toUpperCase();
@@ -1460,7 +1476,7 @@ function selectLcSession(id) {
 
 async function pollLcSession(id) {
   if (lcSelectedId !== id) { clearInterval(lcPollingTimer); return; }
-  const { data } = await sb.from('support_tickets').select('*').eq('id', id).single();
+  const { data } = await sb.rpc('admin_get_ticket', { t_id: id });
   if (data) {
     const idx = lcSessions.findIndex(x => x.id === id);
     if (idx >= 0) lcSessions[idx] = data;
@@ -1510,20 +1526,19 @@ async function sendLcReply() {
   document.getElementById('lc-err').style.display = 'none';
 
   const t = lcSessions.find(x => x.id === lcSelectedId);
-  const prev = t ? (t.message || '') : '';
-  const updated = prev + '\n---\n[admin] ' + text + ' [' + new Date().toISOString() + ']';
-  const { error } = await sb.from('support_tickets').update({
-    message: updated,
-    admin_reply: text,
-    status: document.getElementById('lc-status-sel').value,
-    updated_at: new Date().toISOString()
-  }).eq('id', lcSelectedId);
+  const newStatus = document.getElementById('lc-status-sel').value;
+  const { data: updated, error } = await sb.rpc('admin_append_ticket_message', {
+    ticket_id: lcSelectedId, msg: text, p_admin_reply: text, new_status: newStatus
+  });
   setLoading('lc-send-btn', false, 'Send');
   if (error) { showAlert('lc-err', error.message); return; }
   document.getElementById('lc-reply-input').value = '';
   // Update local state & re-render immediately
-  if (t) {
-    t.message = updated;
+  if (updated) {
+    if (t) { t.message = updated.message; t.admin_reply = text; t.status = updated.status; }
+    else if (updated) { lcSessions.unshift(updated); }
+    renderLcMsgs(updated);
+  } else if (t) {
     t.admin_reply = text;
     renderLcMsgs(t);
   }
@@ -1532,17 +1547,10 @@ async function sendLcReply() {
 async function updateLcStatus() {
   if (!lcSelectedId) return;
   const newStatus = document.getElementById('lc-status-sel').value;
-  await sb.from('support_tickets').update({ status: newStatus }).eq('id', lcSelectedId);
+  await sb.rpc('admin_set_ticket_status', { ticket_id: lcSelectedId, new_status: newStatus });
   const t = lcSessions.find(x => x.id === lcSelectedId);
   if (t) t.status = newStatus;
   loadLiveChats();
-}
-
-// Override showSection to load live chats on nav
-const _origShowSection = showSection;
-function showSection(id) {
-  _origShowSection.call(this, id);
-  if (id === 'livechat') loadLiveChats();
 }
 
 init();

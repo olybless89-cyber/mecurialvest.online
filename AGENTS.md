@@ -231,3 +231,21 @@ authoritative, standalone redefinition of the admin user-management RPCs:
 - Ensures `admin@mercurialvest.online` / `admin@gmail.com` have `role='admin'`.
 Verified live in-browser: All Users lists every user (no RLS banner), and the
 toggle status button flips users active↔inactive through the RPC.
+
+## Admin panel JS gotchas (2026-08)
+- `admin.html` live-chat render code called an `esc()` HTML-escape helper that
+  was **never defined**, so `loadLiveChats()` threw a ReferenceError and the
+  Live Chat section stayed stuck on "Loading…". Fix: a top-level
+  `function esc(s){...}` is now defined near the other helpers. Any new code
+  that interpolates user text into innerHTML must use `esc()` (or define it).
+- `admin.html` `showSection(id)` uses the global `event` (`event.currentTarget`)
+  rather than a passed element — works in browsers but fragile in headless
+  automation. `dashboard.html` `showSection(id, el)` is the cleaner pattern.
+- When editing any HTML page's inline JS, extract the `<script>` blocks with a
+  tiny python+regex and run `node --check`. A single syntax error in one
+  function breaks the WHOLE inline script, so `init()` silently never runs and
+  the page hangs on "Loading ... forever".
+- Verified end-to-end (self-hosted Supabase): Deposit section now
+  clicks/responds and creates `deposit_requests`; admin "All Users" loads all
+  users (digit-free accounts like `MVyvfhkrsx`); Live Chat renders sessions;
+  ATM card shows `•••• •••• krsx` (last chars of digit-free account, no digits).
