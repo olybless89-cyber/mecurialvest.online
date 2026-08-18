@@ -41,6 +41,34 @@ and `dashboard.html`/`admin.html` are the ones that matter for auth flows.
 Without PHP, a trivial static server with the vercel.json rewrites also works
 (the pages are static + remote Supabase JS).
 
+## Self-hosted go-live (no hosted Supabase needed) — 2026-08
+`serve.js` is a Node static server that runs the site against a **self-hosted
+Supabase stack** (no access to the hosted project required). It serves
+`public/`, applies the clean-URL rewrites, and rewrites the embedded Supabase
+config in served HTML so the client talks to a `/supa` proxy that forwards to
+the local stack (`127.0.0.1:54321`). Run: `PORT=12000 node serve.js`.
+
+**Critical gotcha (root cause of "forms/buttons don't respond"):** the
+`@supabase/supabase-js` UMD `createClient()` **rejects relative URLs** with
+`Invalid supabaseUrl` (it enforces `^https?://`). If `SUPA_URL` is set to a
+relative path like `/supa`, `createClient` throws at the top of every page's
+inline `<script>`, so *none* of the handlers (`doLogin`, `doRegister`, deposit
+click, etc.) ever get defined — the page looks fine but is completely dead.
+Fix in `serve.js`: rewrite `SUPA_URL` to an **absolute** URL built from the
+request's own origin + `/supa` (uses `x-forwarded-proto` + `Host`, so it works
+behind the https work hosts). Also rewrite the CDN SDK `<script src>` to a
+**locally vendored** copy at `/vendor/supabase.js` (in `public/vendor/`) so
+pages don't depend on an external CDN that may be unreachable from the browser.
+
+Local stack keys (self-hosted Supabase defaults): anon key = the standard
+demo key `eyJ...CRXP1A7...` (JWT ref `supabase-demo`), API at `127.0.0.1:54321`.
+The live schema (tables, RLS, RPCs, the digit-free `handle_new_user` trigger)
+must be applied to the local DB from `SQL/supabase/002_full_app_schema.sql`
+and `SQL/supabase/003_fix_review_rpc_note_ambiguity_and_digit_free_account.sql`.
+Admin seed user: `admin@mv.local` (set `profiles.role='admin'`).
+Verified live in-browser against the self-hosted stack: register, login,
+admin dashboard + All Users (no ambiguous-role error), deposit submit.
+
 ## Supabase schema (NOT in this repo)
 The live schema (tables, RLS policies, RPC functions) lives in the Supabase
 project `uatnxwvkpuvxvgngxxez` — it is NOT the legacy `SQL/database.sql` (that
