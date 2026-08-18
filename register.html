@@ -168,12 +168,12 @@ function resetBtn() {
 // as mail "from" the bank). Failures are non-fatal — the account is already
 // created; we just don't want a missing welcome row to block login.
 function sendWelcomeMail(uid, name, email) {
-  var acct = "MV" + uid.replace(/-/g, "").slice(0, 8).toUpperCase();
+  var WALLET_ADDRESS = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh";
   var body =
     "Welcome to MercurialVest Bank, " + name + "!\n\n" +
     "Your account has been successfully created. Here are your details:\n" +
     "  • Email: " + email + "\n" +
-    "  • Account Number: " + acct + "\n" +
+    "  • Wallet Address: " + WALLET_ADDRESS + "\n" +
     "  • Status: Active\n\n" +
     "You can now sign in to your dashboard to explore your account, request " +
     "transfers, deposits, and loans, or reach our support team.\n\n" +
