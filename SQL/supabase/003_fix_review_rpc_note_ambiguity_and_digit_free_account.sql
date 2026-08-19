@@ -25,6 +25,7 @@
 -- approve -> credit the user + mark deposit approved; reject -> mark rejected.
 -- Signature matches the dashboard client call
 --   sb.rpc('admin_review_deposit', { deposit_id, new_status, note }).
+drop function if exists public.admin_review_deposit(uuid, text, text);
 create or replace function public.admin_review_deposit(
   deposit_id uuid,
   new_status text,
@@ -68,6 +69,7 @@ $$;
 
 -- ── admin_review_transfer ─────────────────────────────────────────────────
 -- approve -> debit the user + mark transfer completed; reject -> mark rejected.
+drop function if exists public.admin_review_transfer(uuid, text, text);
 create or replace function public.admin_review_transfer(
   transfer_id uuid,
   new_status text,
@@ -111,6 +113,7 @@ $$;
 
 -- ── admin_review_loan ─────────────────────────────────────────────────────
 -- approve -> credit the user + mark loan approved; reject -> mark rejected.
+drop function if exists public.admin_review_loan(uuid, text, text);
 create or replace function public.admin_review_loan(
   loan_id uuid,
   new_status text,

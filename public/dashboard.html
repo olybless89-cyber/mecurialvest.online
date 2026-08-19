@@ -1446,5 +1446,27 @@ function esc(s) {
 
 init();
 </script>
+
+<!-- ── Live Chat Widget ───────────────────────────────────────────────── -->
+<script>
+  // Config is set after userId is known (init() populates userId & userProfile)
+  (function waitForUser() {
+    const interval = setInterval(function () {
+      if (typeof userId !== 'undefined' && userId) {
+        clearInterval(interval);
+        window.MVChat = {
+          userId:    userId,
+          userEmail: userProfile && userProfile.email ? userProfile.email : '',
+          userName:  userProfile && userProfile.full_name ? userProfile.full_name : ''
+        };
+        var s = document.createElement('script');
+        s.src = '/chat-widget.js';
+        document.body.appendChild(s);
+      }
+    }, 300);
+    // Timeout after 8s — load widget anyway (guest mode)
+    setTimeout(function () { clearInterval(interval); }, 8000);
+  })();
+</script>
 </body>
 </html>

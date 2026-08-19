@@ -32,6 +32,8 @@ begin
   end if;
 
   -- Fix ambiguous "role" column in admin_get_all_users
+  drop function if exists public.admin_get_all_users();
+  drop function if exists public.admin_set_user_status(uuid, text);
   create or replace function public.admin_get_all_users()
   returns setof public.profiles
   language plpgsql

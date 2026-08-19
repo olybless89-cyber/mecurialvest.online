@@ -28,6 +28,16 @@ begin
   end if;
 
   -- ── Deposits ──
+  drop function if exists public.admin_get_all_deposits();
+  drop function if exists public.admin_get_all_transfers();
+  drop function if exists public.admin_get_all_loans();
+  drop function if exists public.admin_get_all_tickets();
+  drop function if exists public.admin_get_all_transactions();
+  drop function if exists public.admin_get_deposit(uuid);
+  drop function if exists public.admin_get_transfer(uuid);
+  drop function if exists public.admin_get_loan(uuid);
+  drop function if exists public.admin_get_ticket(uuid);
+  drop function if exists public.admin_send_message(uuid, text, text, text);
   create or replace function public.admin_get_all_deposits()
   returns setof public.deposit_requests
   language plpgsql security definer set search_path = public

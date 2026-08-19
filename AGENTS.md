@@ -249,3 +249,67 @@ toggle status button flips users active↔inactive through the RPC.
   clicks/responds and creates `deposit_requests`; admin "All Users" loads all
   users (digit-free accounts like `MVyvfhkrsx`); Live Chat renders sessions;
   ATM card shows `•••• •••• krsx` (last chars of digit-free account, no digits).
+
+
+## 2026-08-19 — Critical "admin sees nothing" postmortem + full E2E hardening
+Root causes found together (ALL had to be fixed):
+1. **Migrations never ran on the live project.** The GitHub Actions secret
+   `SUPABASE_PROJECT_REF` was set to `pvpoedxkoyatenqayzyt` while the site
+   embeds `uatnxwvkpuvxvgngxxez`. Every fix CI "applied" went to the wrong
+   project. Verify secrets before debugging SQL.
+2. **Migration 005 was foreign-schema**: it targeted `public.users`/`orders`
+   of the wrong project and was rewritten to fix `admin_get_all_users` (drop +
+   recreate; old signature returned a stale column set) and
+   `admin_set_user_status` with table-qualified `p.role` (42702 ambiguity fix).
+3. **Missing DROP guards** — several migrations used bare
+   `CREATE OR REPLACE FUNCTION` on RPCs whose `RETURNS` changed; Postgres
+   rejects that (42P13) so the API kept the OLD broken function. All
+   migrations 001/002/003/006/007/008 now `drop function if exists ...`
+   first (inside `DO $$` guards where the table may not exist yet).
+4. **Client/DB status mismatch for holds**: `admin_hold_funds` inserts
+   transactions with `status='pending'` + `held=true`; the admin release
+   modal must filter `filter_status: 'pending'` (was `'active'` -> always
+   empty). `admin_get_stats` must count `held=true`, not `status='active'`.
+5. **Widget script path**: pages must load `/chat-widget.js` (never
+   `/public/chat-widget.js` — that path 404s on Vercel).
+6. **CI**: `deploy.yml` now FAILS the job if any migration returns non-2xx
+   (was: warn-and-pass), and the duplicate `vercel deploy` job was removed —
+   Vercel's own Git integration deploys `public/`; the CLI job only failed.
+   `workflow_dispatch:` lets you re-run migrations manually.
+
+## Guest + session live chat (008_guest_chat.sql)
+- `public.create_guest_ticket(guest_name, guest_email, guest_message)` —
+  SECURITY DEFINER, grants to `anon`, inserts `support_tickets` row with
+  `user_id = NULL`, `category='live_chat'`, subject `Live Chat: <email>`,
+  first message `[guest] <name> (<email>): <msg>`. Returns ticket uuid.
+- Widget (`public/chat-widget.js`) — the ONLY copy is in `public/`:
+  - Logged-in users: widget passes `access_token` + `refresh_token` from
+    `localStorage sb-<ref>-auth-token` into `createClient` options, so the
+    INSERT carries the user's JWT (anon key alone would break RLS).
+  - Guests: calls `create_guest_ticket` (no auth header needed).
+  - Admin-reply dedup: on realtime UPDATE, if the ticket's `admin_reply`
+    changed, append it as an admin bubble (skip if last bubble text is the
+    same) — the old code re-pushed it on every UPDATE.
+
+## Verification recipe (no hosted Supabase access needed)
+Spin up plain Postgres 16 (`docker run -e POSTGRES_PASSWORD=...`), stub the
+auth layer, then `psql -f` each `SQL/supabase/*.sql` in order:
+    create schema if not exists auth;
+    create table auth.users(id uuid primary key, email text,
+      email_confirmed_at timestamptz, raw_user_meta_data jsonb);
+    create or replace function auth.uid() returns uuid language sql stable
+      as $$ select nullif(current_setting('app.user_id', true), '')::uuid $$;
+    create role anon; create role authenticated;
+Set the "current user" per test with `set app.user_id = '<uuid>'`. This
+proved: signup trigger (digit-free MV accounts), admin_get_all_users (no
+42702), status toggle + self-toggle 44000, KYC/credit/hold/release,
+deposit/transfer/loan review (approve credits balance + saves `note`,
+reject saves note only), ticket append/status/reply, `create_guest_ticket`
+(NULL user_id + validation errors), stats JSON, and non-admin 42501 denial.
+
+## serve.js https upstreams
+`SUPABASE_API_URL` may now be an `https://` URL (e.g. the hosted project);
+the proxy picks `https.request` and port 443 automatically. Browser E2E:
+`SUPABASE_API_URL=https://<project>.supabase.co SUPABASE_ANON_KEY=<hosted
+anon key> PORT=12000 node serve.js` — register, deposit, chat, login all
+verified working against the live project this way.

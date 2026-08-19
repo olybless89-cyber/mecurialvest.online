@@ -26,6 +26,7 @@ begin
   -- ── All transactions for a specific user (admin view) ──
   -- Optional type/status filters narrow the result (used by the release-hold
   -- modal: type='hold', status='active'). Returns all when filters are null.
+  drop function if exists public.admin_get_user_transactions(uuid, text, text);
   create or replace function public.admin_get_user_transactions(
     target_uid uuid, filter_type text default null, filter_status text default null
   )
@@ -75,6 +76,7 @@ begin
   $f$;
 
   -- ── Live chat: change a ticket's status ──
+  drop function if exists public.admin_set_ticket_status(uuid, text);
   create or replace function public.admin_set_ticket_status(
     ticket_id uuid, new_status text
   )

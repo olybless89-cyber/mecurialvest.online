@@ -989,7 +989,7 @@ function openHoldModal() {
 async function openReleaseModal() {
   closeModal('modal-user');
   document.getElementById('release-err').style.display='none';
-  const { data: holds } = await sb.rpc('admin_get_user_transactions', { target_uid: selectedUserId, filter_type: 'hold', filter_status: 'active' });
+  const { data: holds } = await sb.rpc('admin_get_user_transactions', { target_uid: selectedUserId, filter_type: 'hold', filter_status: 'pending' });
   const el = document.getElementById('active-holds-list');
   if (!holds || !holds.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">No active holds on this account.</div></div>'; }
   else {
@@ -1235,7 +1235,7 @@ async function loadTickets() {
   if (!rows.length) { tb.innerHTML = '<tr><td colspan="6"><div class="empty"><div class="empty-icon">🎫</div><div class="empty-text">No support tickets</div></div></td></tr>'; return; }
   tb.innerHTML = rows.map(t => `
     <tr>
-      <td>${users[t.user_id]||t.user_id.substring(0,8)}</td>
+      <td>${users[t.user_id]||(t.user_id ? t.user_id.substring(0,8) : 'Guest')}</td>
       <td style="max-width:160px;white-space:normal;color:#e2e8f0">${t.subject}</td>
       <td><span class="badge badge-user">${t.category}</span></td>
       <td><span class="badge badge-${t.status}">${t.status.replace('_',' ')}</span></td>
@@ -1252,7 +1252,7 @@ function openTicketReply(tid) {
     const users = {};
     allUsers.forEach(u => users[u.id] = u.email);
     document.getElementById('tk-details').innerHTML = `
-      <div><strong style="color:#e2e8f0">From:</strong> ${users[t.user_id]||t.user_id}</div>
+      <div><strong style="color:#e2e8f0">From:</strong> ${users[t.user_id]||(t.user_id||'Guest')}</div>
       <div><strong style="color:#e2e8f0">Subject:</strong> ${t.subject}</div>
       <div><strong style="color:#e2e8f0">Category:</strong> ${t.category}</div>
       <div style="margin-top:10px;padding-top:10px;border-top:1px solid #1e2d4a;color:#cbd5e1">${t.message}</div>
@@ -1356,7 +1356,7 @@ function filterTxns() {
   const q = document.getElementById('txn-search').value.toLowerCase();
   const users = {};
   allUsers.forEach(u => users[u.id] = u.email);
-  renderTxns(allTxns.filter(t => (t.reason||'').toLowerCase().includes(q) || (users[t.user_id]||'').toLowerCase().includes(q) || t.type.includes(q)));
+  renderTxns(allTxns.filter(t => (t.description||'').toLowerCase().includes(q) || (users[t.user_id]||'').toLowerCase().includes(q) || t.type.includes(q)));
 }
 
 // ── UI Helpers ────────────────────────────────────────
@@ -1423,7 +1423,7 @@ async function loadLiveChats() {
 
   list.innerHTML = tickets.map(t => {
     const u = users[t.user_id];
-    const name = u ? (u.full_name || u.email) : t.user_id.substring(0, 8);
+    const name = u ? (u.full_name || u.email) : (t.user_id ? t.user_id.substring(0, 8) : 'Guest');
     const initials = (name[0] || 'U').toUpperCase();
     const isOpen = t.status === 'open';
     const preview = lcPreview(t);

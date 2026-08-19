@@ -221,6 +221,7 @@ $$;
 -- ── admin_get_all_users (FIXED — see 001_fix_admin_user_management.sql) ──
 -- SECURITY DEFINER bypasses RLS; every column is table-qualified (p.col) so
 -- there is no PL/pgSQL variable/column ambiguity. Returns the full profile row.
+drop function if exists public.admin_get_all_users();
 create or replace function public.admin_get_all_users()
 returns setof public.profiles
 language plpgsql
@@ -237,6 +238,21 @@ begin
     order by p.created_at desc;
 end;
 $$;
+
+-- Drop-then-create for every admin RPC: the live project may carry older
+-- versions with different return types, and CREATE OR REPLACE cannot change a
+-- return type (42P13). handle_new_user/is_admin keep plain CREATE OR REPLACE
+-- (a trigger / other functions may depend on them and their types are stable).
+drop function if exists public.admin_set_user_status(uuid, text);
+drop function if exists public.admin_update_kyc(uuid, text);
+drop function if exists public.admin_credit_user(uuid, numeric, text);
+drop function if exists public.admin_hold_funds(uuid, numeric, text);
+drop function if exists public.admin_release_hold(uuid);
+drop function if exists public.admin_review_deposit(uuid, text, text);
+drop function if exists public.admin_review_transfer(uuid, text, text);
+drop function if exists public.admin_review_loan(uuid, text, text);
+drop function if exists public.admin_reply_ticket(uuid, text, text);
+drop function if exists public.admin_get_stats();
 
 -- ── admin_set_user_status (NEW — replaces RLS-blocked client update) ─────
 create or replace function public.admin_set_user_status(

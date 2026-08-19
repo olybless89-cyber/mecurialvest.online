@@ -8,10 +8,10 @@
  *   <script>
  *     window.MVChat = { userId: '<uuid>', userEmail: 'user@x.com', userName: 'Jane' };
  *   </script>
- *   <script src="/public/chat-widget.js"></script>
+ *   <script src="/chat-widget.js"></script>
  *
  * Usage (public pages — pre-login):
- *   <script src="/public/chat-widget.js"></script>
+ *   <script src="/chat-widget.js"></script>
  *   (no MVChat config needed — shows a "contact us" guest form)
  */
 (function () {
@@ -33,14 +33,32 @@
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
+  // ── Auth: use the logged-in user's session token ─────────────────────────
+  // @supabase/supabase-js persists the session in localStorage under
+  // sb-<project-ref>-auth-token. RLS on support_tickets requires
+  // auth.uid() = user_id, so calling with the anon key only (the old code)
+  // meant every ticket read/write failed — the widget was dead even for
+  // logged-in users. Send the user's access token whenever one is stored.
+  const PROJECT_REF = SUPA_URL.match(/^https?:\/\/([^.]+)\.supabase\.co/)[1];
+  function userToken() {
+    try {
+      const raw = localStorage.getItem('sb-' + PROJECT_REF + '-auth-token');
+      if (!raw) return null;
+      const sess = JSON.parse(raw);
+      const tok = sess && (sess.access_token || (sess.session && sess.session.access_token));
+      return tok || null;
+    } catch (e) { return null; }
+  }
+
   // ── Supabase REST helper (no SDK needed) ──────────────────────────────────
   async function sbFetch(method, path, body) {
+    const token = userToken() || SUPA_KEY;
     const r = await fetch(SUPA_URL + path, {
       method,
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPA_KEY,
-        'Authorization': 'Bearer ' + SUPA_KEY,
+        'Authorization': 'Bearer ' + token,
         'Prefer': method === 'POST' ? 'return=representation' : ''
       },
       body: body ? JSON.stringify(body) : undefined
@@ -216,18 +234,25 @@
     document.getElementById('mv-g-btn').disabled = true;
     document.getElementById('mv-g-btn').textContent = 'Sending…';
 
-    // Store as a support ticket with a placeholder user_id
-    // (using a fixed guest UUID so RLS anon insert works)
-    await sbFetch('POST', '/rest/v1/support_tickets', {
-      user_id: '00000000-0000-0000-0000-000000000000',
-      category: 'general',
-      subject: 'Guest enquiry from ' + name,
-      message: msg + '\n\n—\nFrom: ' + name + ' <' + email + '>',
-      status: 'open'
+    // Guests have no session, so a plain insert is rejected by RLS (and the
+    // old placeholder-zero user_id also violated the auth.users FK). The
+    // create_guest_ticket RPC (migration 008) is SECURITY DEFINER: it inserts
+    // server-side with a NULL user_id.
+    const res = await sbFetch('POST', '/rest/v1/rpc/create_guest_ticket', {
+      p_name: name, p_email: email, p_message: msg
     });
 
-    document.getElementById('mv-g-ok').style.display = 'block';
-    document.getElementById('mv-g-btn').style.display = 'none';
+    if (res) {
+      document.getElementById('mv-g-ok').style.display = 'block';
+      document.getElementById('mv-g-btn').style.display = 'none';
+    } else {
+      document.getElementById('mv-g-btn').disabled = false;
+      document.getElementById('mv-g-btn').textContent = 'Send Message';
+      const okEl = document.getElementById('mv-g-ok');
+      okEl.textContent = '⚠️ Could not send — please email ' + SUPPORT_EMAIL;
+      okEl.style.background = '#fee2e2'; okEl.style.color = '#991b1b';
+      okEl.style.display = 'block';
+    }
   }
 
   // ── Logged-in chat ────────────────────────────────────────────────────────
@@ -275,7 +300,11 @@
         time: ticket.updated_at
       });
     });
-    if (ticket.admin_reply && ticket.status !== 'closed') {
+    if (ticket.admin_reply && ticket.status !== 'closed' &&
+        !(ticket.message || '').includes('[admin] ' + ticket.admin_reply)) {
+      // Live-chat replies are also appended to the message thread by
+      // admin_append_ticket_message; only surface admin_reply here when it is
+      // not already represented there (regular ticket replies).
       out.push({ side: 'admin', text: ticket.admin_reply, time: ticket.updated_at });
     }
     return out;
@@ -344,7 +373,8 @@
   // ── Realtime subscription ─────────────────────────────────────────────────
   function subscribeRealtime() {
     if (!window.supabase || !ticketId) return;
-    const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+    const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY,
+      { global: { headers: { Authorization: 'Bearer ' + (userToken() || SUPA_KEY) } } });
     realtimeSub = sb
       .channel('mv-chat-' + ticketId)
       .on('postgres_changes', {

@@ -157,6 +157,8 @@ function proxySupabase(req, res, reqPath) {
   let target = SUPABASE_API_URL + reqPath.replace(/^\/supa/, '');
   const parsed = url.parse(target, true);
   const upstream = parsed;
+  // Support https upstreams too (e.g. proxying straight at a hosted project).
+  const transport = upstream.protocol === 'https:' ? require('https') : http;
   const payload = [];
   req.on('data', c => payload.push(c));
   req.on('end', () => {
@@ -165,10 +167,10 @@ function proxySupabase(req, res, reqPath) {
     delete headers['host'];
     delete headers['content-length'];
     if (body.length) headers['content-length'] = body.length;
-    const proxyReq = http.request(
+    const proxyReq = transport.request(
       {
         hostname: upstream.hostname,
-        port: upstream.port || 80,
+        port: upstream.port || (upstream.protocol === 'https:' ? 443 : 80),
         path: upstream.path,
         method: req.method,
         headers,

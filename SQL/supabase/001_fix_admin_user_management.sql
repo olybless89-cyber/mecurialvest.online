@@ -31,6 +31,23 @@
 -- idempotent (CREATE OR REPLACE) and safe to re-run.
 -- ─────────────────────────────────────────────────────────────────────────────
 
+-- The live project may carry an older admin_get_all_users / admin_set_user_status
+-- with a different return type; CREATE OR REPLACE cannot change a return type
+-- (error 42P13), so drop first. Dropping is dependency-free here: nothing
+-- references these functions in policies or views.
+do $guard$
+begin
+  if not exists (
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = 'profiles'
+  ) then
+    -- No profiles table yet (fresh database): 002 creates it plus these RPCs.
+    return;
+  end if;
+
+drop function if exists public.admin_get_all_users();
+drop function if exists public.admin_set_user_status(uuid, text);
+
 -- 1) Working, unambiguous admin user list.
 --    SECURITY DEFINER + explicit table aliases remove both the RLS barrier and
 --    the PL/pgSQL name-clash that broke the previous version. Returns the full
@@ -108,3 +125,6 @@ grant execute on function public.admin_set_user_status(uuid, public.profiles.sta
 -- Refresh the PostgREST schema cache so the (re)defined functions are picked up
 -- immediately (Supabase listens for this notification).
 notify pgrst, 'reload schema';
+end;
+$guard$;
+
