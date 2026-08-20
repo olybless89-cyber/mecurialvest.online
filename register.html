@@ -144,9 +144,9 @@ function doRegister(e) {
   var fullName = first + " " + last;
 
   // Use Edge Function to create user (bypasses Supabase email rate limit)
-  fetch("https://bqlhzfmtrbrbldkoyyri.supabase.co/functions/v1/register", {
+  fetch("https://xaqnaesxgzgrldusibrr.supabase.co/functions/v1/register", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxbGh6Zm10cmJyYmxka295eXJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxOTg2MzAsImV4cCI6MjEwMjc3NDYzMH0.sUsurCi7wwjUtCkP7vgTjr01CBbRxrxQC4-knDZHBE8" },
+    headers: { "Content-Type": "application/json", "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhhcW5hZXN4Z3pncmxkdXNpYnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwNjQ1NjEsImV4cCI6MjEwMjY0MDU2MX0.L97_zQhpVh9txxnR-OGA-b7jtDPyecMmtQ1g41xUSxk" },
     body: JSON.stringify({ email: email, password: pw, full_name: fullName })
   })
   .then(function(r) { return r.json().then(function(d) { return {ok: r.ok, data: d}; }); })
