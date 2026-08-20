@@ -8,7 +8,7 @@ The `app/` controllers are dead code. All real functionality lives client-side i
 the `.html` files, which talk to **Supabase** directly via the embedded anon key.
 
 ## Auth / data backend
-- Supabase project: `uatnxwvkpuvxvgngxxez.supabase.co` (anon key embedded in
+- Supabase project: `bqlhzfmtrbrbldkoyyri.supabase.co` (anon key embedded in
   `login.html`, `register.html`, `dashboard.html`, `admin.html`, `admin-login.html`).
 - Auth: `supabase.auth.signUp` / `signInWithPassword` / `getSession` / `signOut`.
 - A `profiles` table is auto-populated by a DB trigger on user signup with
@@ -71,7 +71,7 @@ admin dashboard + All Users (no ambiguous-role error), deposit submit.
 
 ## Supabase schema (NOT in this repo)
 The live schema (tables, RLS policies, RPC functions) lives in the Supabase
-project `uatnxwvkpuvxvgngxxez` — it is NOT the legacy `SQL/database.sql` (that
+project `bqlhzfmtrbrbldkoyyri` — it is NOT the legacy `SQL/database.sql` (that
 is a MySQL phpMyAdmin dump from the old PHP app and is dead code). Migrations
 that touch the live Supabase schema live in `SQL/supabase/` and must be applied
 manually in the Supabase Dashboard SQL editor (the repo has no service_role key
@@ -255,7 +255,7 @@ toggle status button flips users active↔inactive through the RPC.
 Root causes found together (ALL had to be fixed):
 1. **Migrations never ran on the live project.** The GitHub Actions secret
    `SUPABASE_PROJECT_REF` was set to `pvpoedxkoyatenqayzyt` while the site
-   embeds `uatnxwvkpuvxvgngxxez`. Every fix CI "applied" went to the wrong
+   embeds `bqlhzfmtrbrbldkoyyri`. Every fix CI "applied" went to the wrong
    project. Verify secrets before debugging SQL.
 2. **Migration 005 was foreign-schema**: it targeted `public.users`/`orders`
    of the wrong project and was rewritten to fix `admin_get_all_users` (drop +
