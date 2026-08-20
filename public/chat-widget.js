@@ -17,8 +17,8 @@
 (function () {
   'use strict';
 
-  const SUPA_URL = 'https://uatnxwvkpuvxvgngxxez.supabase.co';
-  const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhdG54d3ZrcHV2eHZnbmd4eGV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1NjM1OTAsImV4cCI6MjEwMjEzOTU5MH0.l0X90PCIpX4OZoU1yTEpuh3Ro7ZqkP79KCFiH3RQ_lI';
+  const SUPA_URL = 'https://bqlhzfmtrbrbldkoyyri.supabase.co';
+  const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxbGh6Zm10cmJyYmxka295eXJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxOTg2MzAsImV4cCI6MjEwMjc3NDYzMH0.sUsurCi7wwjUtCkP7vgTjr01CBbRxrxQC4-knDZHBE8';
   const SUPPORT_EMAIL = 'support@mercurialvest.online';
 
   // ── Helpers ───────────────────────────────────────────────────────────────
