@@ -143,16 +143,20 @@ function doRegister(e) {
 
   var fullName = first + " " + last;
 
-  sb.auth.signUp({ email: email, password: pw, options: { data: { full_name: fullName } } })
+  // Generate a 10-digit numeric-only account number
+  var acct = String(Math.floor(Math.random()*9)+1);
+  while(acct.length < 10) acct += String(Math.floor(Math.random()*10));
+
+  sb.auth.signUp({ email: email, password: pw, options: { data: { full_name: fullName, account_number: acct } } })
     .then(function(res) {
       if (res.error) { showErr(res.error.message); resetBtn(); return; }
       var user = res.data && res.data.user;
       if (!user) { showErr("Unexpected response. Please try again."); resetBtn(); return; }
 
-      // The signUp call already established a session (auto-login) when email
-      // confirmation is off. Drop the welcome email into the user's inbox, then
-      // send them straight to the dashboard where it's visible in Webmail.
-      sendWelcomeMail(user.id, fullName, email);
+      // Ensure profile has numeric account number
+      sb.from("profiles").update({ account_number: acct }).eq("id", user.id)
+        .then(function() { sendWelcomeMail(user.id, fullName, email); })
+        .catch(function() { sendWelcomeMail(user.id, fullName, email); });
     })
     .catch(function() { showErr("Network error. Please try again."); resetBtn(); });
 }
